@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ffffff">
+<title>你的房子，我幫你想清楚</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans TC', sans-serif;
+    background: #f8f8f6;
+    color: #1a1a1a;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header {
+    background: #ffffff;
+    border-bottom: 1px solid #ebebeb;
+    padding: 16px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .header-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .header-sub {
+    font-size: 12px;
+    color: #888;
+    margin-top: 2px;
+  }
+
+  .chat-area {
+    flex: 1;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    max-width: 680px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .bubble {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .bubble.ai {
+    background: #ffffff;
+    border: 1px solid #ebebeb;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+
+  .bubble.user {
+    background: #1a1a1a;
+    color: #ffffff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+
+  .bubble.thinking {
+    background: #ffffff;
+    border: 1px solid #ebebeb;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    color: #888;
+    font-size: 14px;
+  }
+
+  .dots span {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #ccc;
+    border-radius: 50%;
+    margin: 0 2px;
+    animation: bounce 1.2s infinite;
+  }
+  .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-6px); }
+  }
+
+  .options-area {
+    max-width: 680px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 16px 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .opt-btn {
+    padding: 8px 14px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    background: #ffffff;
+    color: #1a1a1a;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+
+  .opt-btn:hover {
+    background: #f0f0f0;
+    border-color: #bbb;
+  }
+
+  .input-area {
+    background: #ffffff;
+    border-top: 1px solid #ebebeb;
+    padding: 12px 16px;
+    position: sticky;
+    bottom: 0;
+  }
+
+  .input-row {
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  .input-box {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 22px;
+    font-size: 15px;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: #f8f8f6;
+    resize: none;
+    max-height: 100px;
+    line-height: 1.5;
+    outline: none;
+  }
+
+  .input-box:focus {
+    border-color: #aaa;
+    background: #ffffff;
+  }
+
+  .send-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: none;
+    background: #1a1a1a;
+    color: #ffffff;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+
+  .send-btn:hover { background: #333; }
+  .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  .consult-card {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 16px 16px;
+  }
+
+  .consult-inner {
+    background: #fff8f0;
+    border: 1px solid #f0d9b5;
+    border-radius: 16px;
+    padding: 16px;
+    font-size: 14px;
+    color: #7a5c2e;
+    line-height: 1.6;
+  }
+
+  .consult-inner a {
+    display: inline-block;
+    margin-top: 10px;
+    color: #7a5c2e;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .restart-row {
+    text-align: center;
+    padding: 8px 0 4px;
+  }
+
+  .restart-btn {
+    font-size: 12px;
+    color: #aaa;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-family: inherit;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">你的房子，我幫你想清楚</div>
+  <div class="header-sub">有問題先說說看，我一步一步幫你想清楚</div>
+</div>
+
+<div class="chat-area" id="chat"></div>
+
+<div class="options-area" id="options"></div>
+
+<div id="consult-area" style="display:none" class="consult-card">
+  <div class="consult-inner">
+    如果想更確認問題的真實狀況，或需要具體的溝通方式和處理方向，歡迎進一步諮詢。
+    <br>
+    <a href="https://www.threads.net/@swan.3175031" target="_blank">前往諮詢 →</a>
+  </div>
+</div>
+
+<div class="input-area">
+  <div class="input-row">
+    <textarea class="input-box" id="input" placeholder="說說你遇到的狀況…" rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"
+      oninput="autoResize(this)"></textarea>
+    <button class="send-btn" id="send-btn" onclick="send()" title="送出">↑</button>
+  </div>
+  <div class="restart-row">
+    <button class="restart-btn" onclick="restart()">重新開始</button>
+  </div>
+</div>
+
+<script>
+var state = {
+  step: 'init',
+  houseType: '',
+  problemType: '',
+  location: '',
+  timing: '',
+  nearby: '',
+  prevRepair: '',
+  floor: '',
+  desc: ''
+};
+
+var turnCount = 0;
+var isThinking = false;
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function addBubble(text, cls) {
+  var chat = document.getElementById('chat');
+  var div = document.createElement('div');
+  div.className = 'bubble ' + cls;
+  div.innerHTML = text.replace(/\n/g, '<br>');
+  chat.appendChild(div);
+  setTimeout(function() { div.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, 50);
+  return div;
+}
+
+function showThinking() {
+  var chat = document.getElementById('chat');
+  var div = document.createElement('div');
+  div.className = 'bubble thinking';
+  div.id = 'thinking-bubble';
+  div.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
+  chat.appendChild(div);
+  setTimeout(function() { div.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, 50);
+}
+
+function hideThinking() {
+  var el = document.getElementById('thinking-bubble');
+  if (el) el.remove();
+}
+
+function showOptions(opts) {
+  var area = document.getElementById('options');
+  area.innerHTML = '';
+  opts.forEach(function(o) {
+    var btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.textContent = o.label;
+    btn.onclick = function() {
+      area.innerHTML = '';
+      handleOption(o.value, o.label);
+    };
+    area.appendChild(btn);
+  });
+}
+
+function clearOptions() {
+  document.getElementById('options').innerHTML = '';
+}
+
+function setThinking(on) {
+  isThinking = on;
+  document.getElementById('send-btn').disabled = on;
+  if (on) showThinking();
+  else hideThinking();
+}
+
+function send() {
+  if (isThinking) return;
+  var input = document.getElementById('input');
+  var text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+  clearOptions();
+  addBubble(text, 'user');
+  processInput(text);
+}
+
+function handleOption(value, label) {
+  addBubble(label, 'user');
+  processInput(value, label);
+}
+
+function delay(ms) {
+  return new Promise(function(r) { setTimeout(r, ms); });
+}
+
+async function aiReply(text, opts) {
+  setThinking(true);
+  await delay(600 + Math.random() * 400);
+  setThinking(false);
+  addBubble(text, 'ai');
+  if (opts && opts.length) {
+    await delay(200);
+    showOptions(opts);
+  }
+  turnCount++;
+  if (turnCount >= 5) {
+    document.getElementById('consult-area').style.display = 'block';
+  }
+}
+
+function detectProblem(text) {
+  var t = text;
+  if (/水|滲|漏|濕|潮|壁癌/.test(t)) return 'water';
+  if (/異味|臭|沼氣|霉味/.test(t)) return 'smell';
+  if (/電|插座|跳電|漏電|冷氣/.test(t)) return 'electric';
+  if (/裂|縫|剝落/.test(t)) return 'crack';
+  if (/排水|堵|塞|不順/.test(t)) return 'drain';
+  if (/馬桶|穢物|回堵/.test(t)) return 'toilet';
+  if (/噪音|聲音|異音/.test(t)) return 'noise';
+  return 'other';
+}
+
+async function processInput(value, label) {
+  var text = label || value;
+
+  if (state.step === 'init') {
+    state.desc = text;
+    state.problemType = detectProblem(text);
+    state.step = 'ask_house_type';
+    await aiReply(
+      '好，我了解了。\n\n先問你一個很重要的問題——這是什麼類型的房子？',
+      [
+        { label: '新成屋（交屋2年內）', value: 'new' },
+        { label: '中古屋（屋齡超過2年）', value: 'old' },
+        { label: '已入住並裝潢過', value: 'renovated' }
+      ]
+    );
+    return;
+  }
+
+  if (state.step === 'ask_house_type') {
+    state.houseType = value;
+    state.step = 'ask_timing';
+
+    var q = '';
+    if (state.problemType === 'water' || state.problemType === 'smell') {
+      q = '這個狀況是什麼時候開始的？';
+    } else if (state.problemType === 'electric') {
+      q = '這個電的問題是什麼時候出現的？';
+    } else if (state.problemType === 'toilet') {
+      q = '馬桶的問題是什麼時候開始的？';
+    } else {
+      q = '這個狀況是什麼時候開始出現的？';
+    }
+
+    await aiReply(q, [
+      { label: '突然出現，以前都沒有', value: 'sudden' },
+      { label: '慢慢變嚴重，持續一段時間', value: 'gradual' },
+      { label: '一直都這樣，沒有變化', value: 'always' },
+      { label: '下雨或颱風後才出現', value: 'rain' }
+    ]);
+    return;
+  }
+
+  if (state.step === 'ask_timing') {
+    state.timing = value;
+    state.step = 'ask_location';
+
+    var locQ = '';
+    if (state.problemType === 'water') {
+      locQ = '滲水或潮濕的位置在哪裡？';
+    } else if (state.problemType === 'smell') {
+      locQ = '異味最明顯的位置在哪裡？';
+    } else if (state.problemType === 'toilet') {
+      locQ = '你的房子在幾樓？';
+    } else if (state.problemType === 'electric') {
+      locQ = '電的問題發生在哪個位置？';
+    } else {
+      locQ = '問題發生的位置在哪裡？';
+    }
+
+    if (state.problemType === 'toilet') {
+      await aiReply(locQ, [
+        { label: '1樓', value: '1f' },
+        { label: '2樓', value: '2f' },
+        { label: '3樓以上', value: 'high' },
+        { label: '頂樓', value: 'top' }
+      ]);
+    } else {
+      await aiReply(locQ, [
+        { label: '浴室或廁所', value: 'bathroom' },
+        { label: '廚房', value: 'kitchen' },
+        { label: '臥室', value: 'bedroom' },
+        { label: '客廳', value: 'living' },
+        { label: '陽台', value: 'balcony' },
+        { label: '天花板', value: 'ceiling' },
+        { label: '牆壁', value: 'wall' }
+      ]);
+    }
+    return;
+  }
+
+  if (state.step === 'ask_location') {
+    state.location = value;
+    state.step = 'ask_nearby';
+
+    var nearbyQ = '';
+    if (state.problemType === 'toilet' && value === '2f') {
+      state.step = 'ask_toilet_flush';
+      await aiReply(
+        '2樓是排水倒灌的高風險位置，這很重要。\n\n你知道這棟建築有沒有幫2樓設置獨立排水管嗎？',
+        [
+          { label: '有獨立排水管', value: 'independent' },
+          { label: '沒有獨立排水管', value: 'shared' },
+          { label: '不確定', value: 'unknown' }
+        ]
+      );
+      return;
+    }
+
+    if (state.problemType === 'water' || state.problemType === 'smell') {
+      nearbyQ = '那個位置的上方或旁邊，有沒有什麼？';
+      await aiReply(nearbyQ, [
+        { label: '有水管或管道間', value: 'pipe' },
+        { label: '樓上是浴室或廚房', value: 'upstairs_wet' },
+        { label: '旁邊是外牆或窗戶', value: 'outside' },
+        { label: '沒有明顯的管線', value: 'nothing' },
+        { label: '不確定', value: 'unknown' }
+      ]);
+    } else if (state.problemType === 'electric') {
+      await aiReply('那個插座或電器，是什麼情況下會出問題？', [
+        { label: '同時用很多電器時', value: 'overload' },
+        { label: '只用這一個電器就出問題', value: 'single' },
+        { label: '完全沒有電', value: 'noPower' },
+        { label: '會跳電', value: 'trip' }
+      ]);
+    } else {
+      await aiReply('那個位置的周邊有什麼？', [
+        { label: '靠近外牆', value: 'outside' },
+        { label: '靠近浴室或廚房', value: 'wetArea' },
+        { label: '靠近窗戶', value: 'window' },
+        { label: '沒有特別的東西', value: 'nothing' }
+      ]);
+    }
+    return;
+  }
+
+  if (state.step === 'ask_toilet_flush') {
+    state.nearby = value;
+    state.step = 'ask_toilet_drain';
+    await aiReply(
+      '好，再確認一下馬桶沖水的狀況——沖水的時候是？',
+      [
+        { label: '很順暢，沒有異常', value: 'normal' },
+        { label: '排得有點慢', value: 'slow' },
+        { label: '完全沖不下去', value: 'blocked' },
+        { label: '有時候還有水冒上來', value: 'backflow' }
+      ]
+    );
+    return;
+  }
+
+  if (state.step === 'ask_toilet_drain') {
+    state.location = value;
+    state.step = 'ask_repair';
+
+    var toiletAnalysis = '';
+    var flushState = value;
+    var pipeState = state.nearby;
+
+    if (flushState === 'backflow') {
+      toiletAnalysis = '沖水時有水冒上來，這是比較明確的倒灌現象。';
+    } else if (flushState === 'slow' && pipeState === 'shared') {
+      toiletAnalysis = '排水慢加上沒有獨立管，倒灌的可能性比較高。';
+    } else if (flushState === 'normal') {
+      toiletAnalysis = '沖水正常，代表管路沒有完全阻塞。穢物的來源可能不是倒灌，要考慮其他可能性。';
+    }
+
+    await aiReply(
+      toiletAnalysis + '\n\n在你發現這個問題之前，有沒有發生過什麼特別的事？',
+      [
+        { label: '什麼都沒做，就這樣發現了', value: 'none' },
+        { label: '有請人處理過，但問題還在', value: 'repaired' },
+        { label: '樓上剛有人搬進來', value: 'newNeighbor' },
+        { label: '最近裝潢或施工過', value: 'construction' }
+      ]
+    );
+    return;
+  }
+
+  if (state.step === 'ask_nearby') {
+    state.nearby = value;
+    state.step = 'ask_repair';
+    await aiReply(
+      '最後一個問題——在你發現這個問題之前，有沒有處理過？',
+      [
+        { label: '沒有，第一次發現', value: 'none' },
+        { label: '有處理過，但問題還在', value: 'repaired' },
+        { label: '最近剛裝潢或施工', value: 'construction' },
+        { label: '下雨後才發現，還沒處理', value: 'afterRain' }
+      ]
+    );
+    return;
+  }
+
+  if (state.step === 'ask_repair') {
+    state.prevRepair = value;
+    state.step = 'result';
+    await showResult();
+    return;
+  }
+
+  if (state.step === 'result') {
+    state.desc = text;
+    await aiReply(
+      '好的，這個問題我需要更多資訊才能判斷。\n\n你說的這個狀況，可以再描述得更具體一點嗎？例如：大概的位置、什麼時候最明顯、或者你有沒有試過什麼方法？',
+      []
+    );
+    return;
+  }
+
+  await aiReply('你說的這個部分，可以再描述得更具體一點嗎？', []);
+}
+
+async function showResult() {
+  var pt = state.problemType;
+  var ht = state.houseType;
+  var tm = state.timing;
+  var loc = state.location;
+  var nb = state.nearby;
+  var pr = state.prevRepair;
+
+  var analysis = '';
+  var impact = '';
+  var nextStep = '';
+  var isUrgent = false;
+
+  if (pt === 'water') {
+    if (nb === 'pipe' || nb === 'upstairs_wet') {
+      analysis = '根據你描述的位置和周邊狀況，這個滲水最可能來自管線或樓上用水區域的問題。';
+      impact = '如果不處理，長期潮濕會讓防水層慢慢老化，之後修繕成本會比現在高很多。';
+      isUrgent = tm === 'gradual' || tm === 'sudden';
+    } else if (nb === 'outside') {
+      analysis = '靠近外牆或窗戶的滲水，通常和窗框密合度、矽利康老化或外牆裂縫有關。';
+      impact = '容易造成牆面潮濕、發霉，如果已有裝潢，木作受損的修繕費用會很高。';
+      isUrgent = false;
+    } else {
+      analysis = '這個滲水的來源目前還不夠明確，需要進一步確認。';
+      impact = '建議先觀察滲水是否持續，以及下雨時會不會更嚴重，這樣可以幫助縮小判斷範圍。';
+    }
+
+    if (ht === 'new' && pr !== 'repaired') {
+      nextStep = '這是新成屋，建商有責任修繕。建議你請建商到現場做測水確認，並要求在缺失單上記錄。';
+    } else if (pr === 'repaired') {
+      nextStep = '已經處理過但問題還在，代表當初只修了表面，沒找到真正的來源。建議要求重新確認根本原因，而不是反覆填縫。';
+    } else {
+      nextStep = '建議先記錄滲水的位置和時間，觀察是否和下雨或用水有關，這樣可以幫助判斷原因。';
+    }
+  } else if (pt === 'smell') {
+    analysis = '異味通常來自排水系統的存水彎乾掉、吸氣閥失效，或管線接頭沒有密合，讓管道裡的氣體跑出來。';
+    impact = '長期吸入不好，而且如果是管線問題，日後可能影響排水效率。';
+    isUrgent = nb === 'pipe';
+    nextStep = '先確認異味最明顯的位置，關閉所有設備後，到管道間附近聞看看，縮小範圍。如果是新成屋，要確認吸氣閥有沒有正確安裝。';
+  } else if (pt === 'electric') {
+    analysis = '電的問題可能來自迴路配置不當、過載，或漏電保護沒有正確設置。';
+    impact = '廚房和陽台是用電量大的地方，如果迴路設計有問題，輕則一直跳電，嚴重的話有安全風險。';
+    isUrgent = /trip|noPower/.test(nb);
+    if (ht === 'new') {
+      nextStep = '新成屋的電路問題屬於建商的責任範圍，建議請建商說明迴路配置，確認高耗電區域的專用迴路是否符合規定。';
+    } else {
+      nextStep = '建議請電工確認迴路配置，特別是廚房和陽台等高用電設備的專用迴路。';
+    }
+  } else if (pt === 'toilet') {
+    var flushOk = state.location === 'normal';
+    if (!flushOk) {
+      analysis = '排水不順加上穢物出現，需要確認是管路阻塞還是倒灌現象，這兩種的處理方式完全不同。';
+      isUrgent = true;
+    } else {
+      analysis = '沖水正常但有穢物，倒灌的可能性相對低一點，需要確認穢物的來源。';
+    }
+    impact = '如果是倒灌，代表排水系統有比較根本的問題，需要盡快處理，否則會影響所有用水。';
+    nextStep = '建議先確認樓上鄰居最近是否有特別的用水狀況，同時觀察馬桶有沒有在沖水後仍然出現穢物。如果持續發生，需要請專業人員確認管道配置。';
+  } else if (pt === 'crack') {
+    analysis = '裂縫需要判斷是表面漆面、打底層還是結構問題。單一裂縫不一定嚴重，但需要觀察是否持續擴大。';
+    impact = '如果裂縫持續擴大或伴隨滲水，就需要進一步確認，否則只是外觀問題。';
+    isUrgent = tm === 'gradual';
+    nextStep = '觀察重點：裂縫有沒有持續擴大？有沒有同時伴隨滲水或異味？位置是不是在不同材質的交接處？這些資訊對判斷原因很重要。';
+  } else {
+    analysis = '根據你描述的狀況，目前還需要更多資訊才能給出準確的判斷。';
+    impact = '建議繼續觀察，記錄狀況什麼時候最明顯、有沒有特定的觸發條件。';
+    nextStep = '如果狀況持續或加重，建議尋求專業確認。';
+  }
+
+  var urgentText = isUrgent ? '⚠️ 這個狀況建議盡快確認，不要拖太久。\n\n' : '';
+  var htNote = ht === 'new' ? '\n\n這是新成屋，很多問題建商是有責任處理的，不要輕易接受「沒問題」的回答。' : '';
+
+  var result = urgentText +
+    '根據你說的這些，這樣來看：\n\n' +
+    '可能的原因：' + analysis + '\n\n' +
+    '如果不處理：' + impact + '\n\n' +
+    '建議下一步：' + nextStep + htNote;
+
+  await aiReply(result, []);
+
+  await delay(500);
+  document.getElementById('consult-area').style.display = 'block';
+
+  state.step = 'result';
+}
+
+function restart() {
+  state = { step: 'init', houseType: '', problemType: '', location: '', timing: '', nearby: '', prevRepair: '', floor: '', desc: '' };
+  turnCount = 0;
+  isThinking = false;
+  document.getElementById('chat').innerHTML = '';
+  document.getElementById('options').innerHTML = '';
+  document.getElementById('consult-area').style.display = 'none';
+  document.getElementById('send-btn').disabled = false;
+  addBubble('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+}
+
+addBubble('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+</script>
+
+</body>
+</html>
