@@ -1,0 +1,15 @@
+json{
+  "name": "你的房子，我幫你想清楚",
+  "short_name": "房屋顧問",
+  "start_url": "/house-advisor/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
