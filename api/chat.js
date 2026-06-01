@@ -1,4 +1,4 @@
-javascriptconst fetch = require('node-fetch');
+javascript;
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
