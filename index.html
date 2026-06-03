@@ -3,372 +3,240 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#ffffff">
 <title>你的房子，我幫你想清楚</title>
-<link rel="manifest" href="manifest.json">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans TC', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   background: #f8f8f6;
   color: #1a1a1a;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
 }
-
 .header {
-  background: #ffffff;
-  border-bottom: 1px solid #ebebeb;
-  padding: 16px 20px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  padding: 14px 18px;
 }
-
-.header-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.header-sub {
-  font-size: 12px;
-  color: #888;
-  margin-top: 2px;
-}
-
-.chat-area {
+.header h1 { font-size: 16px; font-weight: 600; }
+.header p { font-size: 12px; color: #888; margin-top: 2px; }
+#chat {
   flex: 1;
-  padding: 20px 16px;
+  overflow-y: auto;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-width: 680px;
-  width: 100%;
-  margin: 0 auto;
-  padding-bottom: 120px;
+  gap: 10px;
+  padding-bottom: 100px;
 }
-
-.bubble {
-  max-width: 85%;
-  padding: 12px 16px;
+.msg {
+  max-width: 82%;
+  padding: 11px 15px;
   border-radius: 18px;
   font-size: 15px;
   line-height: 1.6;
   white-space: pre-wrap;
 }
-
-.bubble.ai {
-  background: #ffffff;
-  border: 1px solid #ebebeb;
+.ai {
+  background: #fff;
+  border: 1px solid #eee;
   align-self: flex-start;
   border-bottom-left-radius: 4px;
 }
-
-.bubble.user {
+.user {
   background: #1a1a1a;
-  color: #ffffff;
+  color: #fff;
   align-self: flex-end;
   border-bottom-right-radius: 4px;
 }
-
-.bubble.thinking {
-  background: #ffffff;
-  border: 1px solid #ebebeb;
+.thinking {
+  background: #fff;
+  border: 1px solid #eee;
   align-self: flex-start;
   border-bottom-left-radius: 4px;
-  color: #888;
+  color: #aaa;
   font-size: 14px;
 }
-
-.dots span {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  background: #ccc;
-  border-radius: 50%;
-  margin: 0 2px;
-  animation: bounce 1.2s infinite;
-}
-.dots span:nth-child(2) { animation-delay: 0.2s; }
-.dots span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes bounce {
-  0%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-6px); }
-}
-
-.input-area {
-  background: #ffffff;
-  border-top: 1px solid #ebebeb;
-  padding: 12px 16px 16px;
+.bottom {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 10;
+  background: #fff;
+  border-top: 1px solid #eee;
+  padding: 10px 14px 14px;
 }
-
-.input-row {
-  max-width: 680px;
-  margin: 0 auto;
+.row {
   display: flex;
   gap: 8px;
   align-items: flex-end;
+  max-width: 680px;
+  margin: 0 auto;
 }
-
-.input-box {
+textarea {
   flex: 1;
-  padding: 10px 14px;
+  padding: 9px 13px;
   border: 1px solid #ddd;
-  border-radius: 22px;
+  border-radius: 20px;
   font-size: 15px;
   font-family: inherit;
-  color: #1a1a1a;
-  background: #f8f8f6;
   resize: none;
+  background: #f8f8f6;
   max-height: 100px;
-  line-height: 1.5;
   outline: none;
 }
-
-.input-box:focus {
-  border-color: #aaa;
-  background: #ffffff;
-}
-
-.send-btn {
-  width: 42px;
-  height: 42px;
+textarea:focus { border-color: #aaa; background: #fff; }
+button#btn {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: #1a1a1a;
-  color: #ffffff;
+  color: #fff;
   font-size: 18px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  transition: background 0.15s;
 }
-
-.send-btn:hover { background: #333; }
-.send-btn:disabled { background: #ccc; cursor: not-allowed; }
-
-.restart-row {
-  text-align: center;
-  padding: 6px 0 0;
-}
-
-.restart-btn {
+button#btn:disabled { background: #ccc; cursor: not-allowed; }
+.restart { text-align: center; margin-top: 6px; }
+.restart button {
   font-size: 12px;
   color: #aaa;
   background: none;
   border: none;
   cursor: pointer;
   text-decoration: underline;
-  text-underline-offset: 2px;
   font-family: inherit;
 }
-
-.consult-card {
-  max-width: 580px;
-  align-self: flex-start;
-}
-
-.consult-inner {
+.consult {
   background: #fff8f0;
   border: 1px solid #f0d9b5;
   border-radius: 16px;
-  padding: 14px 16px;
+  padding: 13px 15px;
   font-size: 14px;
   color: #7a5c2e;
   line-height: 1.6;
+  max-width: 82%;
+  align-self: flex-start;
 }
-
-.consult-inner a {
-  display: inline-block;
-  margin-top: 8px;
-  color: #7a5c2e;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
+.consult a { color: #7a5c2e; font-weight: 600; display: block; margin-top: 6px; }
 </style>
 </head>
 <body>
-
 <div class="header">
-  <div class="header-title">你的房子，我幫你想清楚</div>
-  <div class="header-sub">說說你遇到的狀況，我一步一步幫你想清楚</div>
+  <h1>你的房子，我幫你想清楚</h1>
+  <p>說說你遇到的狀況，我一步一步幫你想清楚</p>
 </div>
-
-<div class="chat-area" id="chat"></div>
-
-<div class="input-area">
-  <div class="input-row">
-    <textarea class="input-box" id="input" placeholder="說說你遇到的狀況…" rows="1"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"
-      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
-    <button class="send-btn" id="send-btn" onclick="send()">↑</button>
+<div id="chat"></div>
+<div class="bottom">
+  <div class="row">
+    <textarea id="txt" rows="1" placeholder="說說你遇到的狀況…"></textarea>
+    <button id="btn">↑</button>
   </div>
-  <div class="restart-row">
-    <button class="restart-btn" onclick="restart()">重新開始</button>
-  </div>
+  <div class="restart"><button onclick="restart()">重新開始</button></div>
 </div>
 
 <script>
-var API_URL = 'https://house-advisor-nine.vercel.app/api/chat';
+var API = 'https://house-advisor-nine.vercel.app/api/chat';
+var SYS = '你是一位有超過十年現場驗屋經驗的顧問，熟悉新成屋、中古屋的各種屋況問題。\n\n你的任務是幫助屋主釐清他們遇到的房屋問題。\n\n核心原則：\n1. 在資訊不足之前，絕對不提供解決方案或診斷結論\n2. 每次回覆只問一個問題，找出當下最關鍵的缺少資訊\n3. 使用者描述的問題可能只是表象，必須逐步縮小範圍\n4. 用口語、平易近人的方式溝通，像在跟朋友說話\n5. 不要用條列式，用自然的對話方式\n\n判斷邏輯（不要直接說出來）：\n- 先確認是新成屋還是中古屋\n- 了解問題是突然出現還是慢慢變嚴重\n- 確認問題的具體位置和周邊環境\n- 馬桶有穢物：第一問幾樓，第二問有無獨立排水管，第三問沖水狀況\n- 滲水：確認位置、周邊有無管線、是否跟下雨有關\n- 了解之前有沒有處理過\n\n什麼時候才給判斷：資訊足夠後才給，說可能的原因，不說一定是。判斷後說明屋主可以做什麼，並加上：如果需要更具體的協助，可以找我諮詢。\n\n記住：寧可多問一個問題，也不要在資訊不足的情況下給出錯誤的判斷。';
 
-var SYSTEM = `你是一位有超過十年現場驗屋經驗的顧問，熟悉新成屋、中古屋的各種屋況問題。
+var hist = [];
+var busy = false;
+var count = 0;
 
-你的任務是幫助屋主釐清他們遇到的房屋問題。
+function addMsg(text, cls) {
+  var d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.textContent = text;
+  document.getElementById('chat').appendChild(d);
+  d.scrollIntoView({behavior:'smooth', block:'end'});
+  return d;
+}
 
-核心原則：
-1. 在資訊不足之前，絕對不提供解決方案或診斷結論
-2. 每次回覆只問一個問題，找出當下最關鍵的缺少資訊
-3. 使用者描述的問題可能只是表象，必須逐步縮小範圍
-4. 用口語、平易近人的方式溝通，像在跟朋友說話
-5. 問題要簡短有力，不要長篇大論
-6. 不要用條列式，用自然的對話方式
-
-判斷邏輯（不要直接說出來，但要依此思考）：
-- 先確認是新成屋還是中古屋，責任歸屬完全不同
-- 了解問題是突然出現還是慢慢變嚴重，判斷急迫性
-- 確認問題的具體位置和周邊環境
-- 馬桶有穢物：第一問幾樓，第二問有無獨立排水管，第三問沖水狀況
-- 滲水：確認位置、周邊有無管線、是否跟下雨有關
-- 異味：確認是什麼味道、在哪裡最明顯
-- 電氣問題：確認是哪種情況下發生
-- 了解之前有沒有處理過，以及結果
-
-什麼時候才給初步判斷：
-- 已知道房子類型、問題出現時間、具體位置、周邊環境這四個資訊後
-- 給判斷時說「可能的原因」，不要說「一定是」
-- 判斷後說明屋主可以做什麼
-
-什麼時候建議進一步諮詢：
-- 問題可能涉及結構安全
-- 建商不肯修繕
-- 問題複雜需要現場確認
-- 說完後加上：「如果需要更具體的協助，可以找我諮詢。」
-
-語氣範例：
-「你說的異味，大概是什麼樣的味道？」
-「這個滲水是什麼時候開始的？」
-「那個位置上方或旁邊，有沒有管線或浴室？」
-「之前有沒有請人處理過？」
-
-記住：寧可多問一個問題，也不要在資訊不足的情況下給出錯誤的判斷。`;
-
-var history = [];
-var isThinking = false;
-var turnCount = 0;
-
-function addBubble(text, cls) {
-  var chat = document.getElementById('chat');
-  var div = document.createElement('div');
-  div.className = 'bubble ' + cls;
-  div.textContent = text;
-  chat.appendChild(div);
-  setTimeout(function() {
-    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, 50);
-  return div;
+function showThink(on) {
+  busy = on;
+  document.getElementById('btn').disabled = on;
+  var el = document.getElementById('think');
+  if (on && !el) {
+    var d = document.createElement('div');
+    d.className = 'msg thinking';
+    d.id = 'think';
+    d.textContent = '想一下…';
+    document.getElementById('chat').appendChild(d);
+    d.scrollIntoView({behavior:'smooth', block:'end'});
+  } else if (!on && el) {
+    el.remove();
+  }
 }
 
 function showConsult() {
-  var chat = document.getElementById('chat');
-  var div = document.createElement('div');
-  div.className = 'consult-card';
-  div.innerHTML = '<div class="consult-inner">如果想更確認問題的真實狀況，或需要具體的溝通方式和處理方向，歡迎進一步諮詢。<br><a href="https://www.threads.net/@swan.3175031" target="_blank">前往諮詢 →</a></div>';
-  chat.appendChild(div);
-  setTimeout(function() {
-    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, 50);
+  var d = document.createElement('div');
+  d.className = 'consult';
+  d.innerHTML = '如果想更確認問題的真實狀況，或需要具體的溝通方式，歡迎進一步諮詢。<a href="https://www.threads.net/@swan.3175031" target="_blank">前往諮詢 →</a>';
+  document.getElementById('chat').appendChild(d);
+  d.scrollIntoView({behavior:'smooth', block:'end'});
 }
 
-function setThinking(on) {
-  isThinking = on;
-  document.getElementById('send-btn').disabled = on;
-  var existing = document.getElementById('thinking-bubble');
-  if (on && !existing) {
-    var chat = document.getElementById('chat');
-    var div = document.createElement('div');
-    div.className = 'bubble thinking';
-    div.id = 'thinking-bubble';
-    div.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
-    chat.appendChild(div);
-    setTimeout(function() {
-      div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }, 50);
-  } else if (!on && existing) {
-    existing.remove();
-  }
-}
-
-async function callAPI(userMsg) {
-  history.push({ role: 'user', content: userMsg });
-
-  var response = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system: SYSTEM,
-      messages: history
-    })
-  });
-
-  var data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || '連線失敗');
-  }
-
-  history.push({ role: 'assistant', content: data.text });
-  return data.text;
-}
-
-async function send() {
-  if (isThinking) return;
-  var input = document.getElementById('input');
-  var text = input.value.trim();
-  if (!text) return;
-
-  input.value = '';
-  input.style.height = 'auto';
-  addBubble(text, 'user');
-  setThinking(true);
-  turnCount++;
-
+async function doSend(text) {
+  hist.push({role:'user', content:text});
+  showThink(true);
   try {
-    var reply = await callAPI(text);
-    setThinking(false);
-    addBubble(reply, 'ai');
-
-    if (turnCount >= 5) {
-      showConsult();
+    var r = await fetch(API, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({system: SYS, messages: hist})
+    });
+    var data = await r.json();
+    showThink(false);
+    if (data.text) {
+      hist.push({role:'assistant', content:data.text});
+      addMsg(data.text, 'ai');
+      count++;
+      if (count >= 5) showConsult();
+    } else {
+      addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
     }
-  } catch (e) {
-    setThinking(false);
-    addBubble('抱歉，連線有點問題，請再試一次。', 'ai');
+  } catch(e) {
+    showThink(false);
+    addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
   }
 }
+
+function send() {
+  if (busy) return;
+  var txt = document.getElementById('txt');
+  var val = txt.value.trim();
+  if (!val) return;
+  txt.value = '';
+  txt.style.height = 'auto';
+  addMsg(val, 'user');
+  doSend(val);
+}
+
+document.getElementById('btn').onclick = send;
+document.getElementById('txt').onkeydown = function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+};
+document.getElementById('txt').oninput = function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+};
 
 function restart() {
-  history = [];
-  turnCount = 0;
-  isThinking = false;
+  hist = [];
+  count = 0;
+  busy = false;
+  document.getElementById('btn').disabled = false;
   document.getElementById('chat').innerHTML = '';
-  document.getElementById('send-btn').disabled = false;
-  addBubble('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+  addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
 }
 
-addBubble('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
 </script>
-
 </body>
 </html>
+
