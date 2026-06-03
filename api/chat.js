@@ -14,32 +14,25 @@ module.exports = async function handler(req, res) {
   var body = req.body;
   var messages = body.messages;
   var system = body.system;
-  var apiKey = process.env.GEMINI_API_KEY;
+  var apiKey = process.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured' });
   }
 
   try {
-    var contents = messages.map(function(m) {
-      return {
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }]
-      };
-    });
-
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/'gemini-1.5-flash-8b:generateContent?key=' + apiKey;
-
-    var response = await fetch(url, {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: system }] },
-        contents: contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 500
-        }
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system: system,
+        messages: messages
       })
     });
 
@@ -50,8 +43,8 @@ module.exports = async function handler(req, res) {
     }
 
     var text = '抱歉，我現在沒辦法回應，請再試一次。';
-    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
-      text = data.candidates[0].content.parts[0].text;
+    if (data.content && data.content[0] && data.content[0].text) {
+      text = data.content[0].text;
     }
 
     return res.status(200).json({ text: text });
