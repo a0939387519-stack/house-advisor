@@ -300,4 +300,88 @@ var CHECK_SYS = '你是一個資訊檢查員。你的任務是判斷屋主的描
 
 async function doSend(text) {
   hist.push({role:'user', content:text});
-  showThink(true
+  showThink(true);
+  try {
+    // 第一輪屋主回答後，先做資訊檢查
+    if (count === 1) {
+      try {
+        var checkMessages = [
+          {role:'user', content:'屋主描述：' + hist.filter(m => m.role === 'user').map(m => m.content).join('。')}
+        ];
+        var checkR = await fetch(API, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({system: CHECK_SYS, messages: checkMessages})
+        });
+        var checkData = await checkR.json();
+        if (checkData.text && checkData.text.trim() !== '資訊足夠') {
+          showThink(false);
+          hist.push({role:'assistant', content:checkData.text});
+          addMsg(checkData.text, 'ai');
+          count++;
+          if (count >= 9 && !consultShown) showConsult();
+          return;
+        }
+      } catch(checkErr) {
+        // 資訊檢查失敗，繼續正常流程
+      }
+    }
+
+    var r = await fetch(API, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({system: SYS, messages: hist})
+    });
+    var data = await r.json();
+    showThink(false);
+    if (data.text) {
+      hist.push({role:'assistant', content:data.text});
+      addMsg(data.text, 'ai');
+      count++;
+      if (count >= 9 && !consultShown) showConsult();
+    } else {
+      addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
+    }
+  } catch(e) {
+    showThink(false);
+    addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
+  }
+}
+
+function send() {
+  if (busy) return;
+  var txt = document.getElementById('txt');
+  var val = txt.value.trim();
+  if (!val) return;
+  txt.value = '';
+  txt.style.height = 'auto';
+  addMsg(val, 'user');
+  doSend(val);
+}
+
+document.getElementById('btn').onclick = send;
+document.getElementById('txt').onkeydown = function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+};
+document.getElementById('txt').oninput = function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+};
+
+function restart() {
+  hist = [];
+  count = 0;
+  busy = false;
+  consultShown = false;
+  document.getElementById('btn').disabled = false;
+  document.getElementById('chat').innerHTML = '';
+  addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+}
+
+addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+</script>
+</body>
+</html>
