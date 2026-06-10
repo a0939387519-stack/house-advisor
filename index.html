@@ -296,65 +296,8 @@ function showConsult() {
   d.scrollIntoView({behavior:'smooth', block:'end'});
 }
 
+var CHECK_SYS = '你是一個資訊檢查員。你的任務是判斷屋主的描述是否包含足夠的資訊來判斷問題方向。\n\n必要資訊清單（根據問題類型）：\n發霉類→新成屋還是中古屋、霉的位置、有沒有窗戶、暖風機或通風習慣\n漏水滲水類→新成屋還是中古屋、漏水位置、什麼時候有（下雨才有還是一直有）\n異味類→新成屋還是中古屋、味道集中在哪個方向、入住就有還是這陣子才有\n電氣類→新成屋還是中古屋、整棟跳還是某個迴路、什麼情況下跳\n積水類→新成屋還是中古屋、積水位置、積在哪裡（靠近排水孔還是遠離）\n馬桶類→新成屋還是中古屋、幾樓、沖水順不順\n其他類型→新成屋還是中古屋、問題位置、什麼時候發生\n\n請分析屋主說的描述，列出還缺少哪些必要資訊。\n如果資訊已經足夠，回覆：「資訊足夠」\n如果資訊不足，直接用一個問句把所有缺少的資訊一次問完，格式：「你能跟我說說＿＿嗎？你知道的說就好。」\n只輸出一句話，不要解釋，不要說你在做什麼。';
+
 async function doSend(text) {
   hist.push({role:'user', content:text});
-  showThink(true);
-  try {
-    var r = await fetch(API, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({system: SYS, messages: hist})
-    });
-    var data = await r.json();
-    showThink(false);
-    if (data.text) {
-      hist.push({role:'assistant', content:data.text});
-      addMsg(data.text, 'ai');
-      count++;
-      if (count >= 9 && !consultShown) showConsult();
-    } else {
-      addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
-    }
-  } catch(e) {
-    showThink(false);
-    addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
-  }
-}
-
-function send() {
-  if (busy) return;
-  var txt = document.getElementById('txt');
-  var val = txt.value.trim();
-  if (!val) return;
-  txt.value = '';
-  txt.style.height = 'auto';
-  addMsg(val, 'user');
-  doSend(val);
-}
-
-document.getElementById('btn').onclick = send;
-document.getElementById('txt').onkeydown = function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    send();
-  }
-};
-document.getElementById('txt').oninput = function() {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-};
-
-function restart() {
-  hist = [];
-  count = 0;
-  busy = false;
-  consultShown = false;
-  document.getElementById('btn').disabled = false;
-  document.getElementById('chat').innerHTML = '';
-  addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
-}
-
-addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
-</script>
-</body>
-</html>
+  showThink(true
