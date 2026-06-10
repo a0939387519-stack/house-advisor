@@ -177,6 +177,15 @@ X（現實困擾＋心理卡點）＋ Y（責任在誰＋責任邊界）＝ Z（
 X和Y清楚後整理：「目前我理解的是＿＿，這樣對嗎？」
 禁止使用「我可能理解錯的地方是」這個句式。
 
+【給Z之前——強制自我檢查】
+
+在給Z之前，必須先問自己：X和Y都清楚了嗎？
+X清楚代表：問題是什麼、在哪裡、什麼情況下發生、屋主的卡點是什麼。
+Y清楚代表：責任在誰、新成屋還是中古屋、有沒有在保固期內。
+
+如果任何一個還不確定→先補問那個缺口，不要猜，補完再給Z。
+確認X和Y都清楚了→才給Z。
+
 【給Z——固定結構，每次都要做到】
 
 屋主確認後，給A方向和B方向各自可能的結果。
@@ -300,52 +309,4 @@ async function doSend(text) {
     showThink(false);
     if (data.text) {
       hist.push({role:'assistant', content:data.text});
-      addMsg(data.text, 'ai');
-      count++;
-      if (count >= 9 && !consultShown) showConsult();
-    } else {
-      addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
-    }
-  } catch(e) {
-    showThink(false);
-    addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
-  }
-}
-
-function send() {
-  if (busy) return;
-  var txt = document.getElementById('txt');
-  var val = txt.value.trim();
-  if (!val) return;
-  txt.value = '';
-  txt.style.height = 'auto';
-  addMsg(val, 'user');
-  doSend(val);
-}
-
-document.getElementById('btn').onclick = send;
-document.getElementById('txt').onkeydown = function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    send();
-  }
-};
-document.getElementById('txt').oninput = function() {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-};
-
-function restart() {
-  hist = [];
-  count = 0;
-  busy = false;
-  consultShown = false;
-  document.getElementById('btn').disabled = false;
-  document.getElementById('chat').innerHTML = '';
-  addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
-}
-
-addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
-</script>
-</body>
-</html>
+      addM
