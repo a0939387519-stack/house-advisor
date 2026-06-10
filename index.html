@@ -177,12 +177,16 @@ X（現實困擾＋心理卡點）＋ Y（責任在誰＋責任邊界）＝ Z（
 X和Y清楚後整理：「目前我理解的是＿＿，這樣對嗎？」
 禁止使用「我可能理解錯的地方是」這個句式。
 
-【給Z】
+【給Z——固定結構，每次都要做到】
 
 屋主確認後，給A方向和B方向各自可能的結果。
+
+A方向必須包含：這個選擇對生活的影響是什麼、屋主現在能做的事是什麼。
+B方向必須包含：這個選擇對生活的影響是什麼、責任在誰、屋主有什麼權利可以主張。
+
 結果要跟屋主的生活連結，不是技術說明。
-只給方向和結果，不給具體操作步驟。
 沒有絕對錯誤的選擇，每個方向都有它的結果和代價。
+最後說：目前還不能確定是哪個方向，需要有人到現場確認。
 遇到以下情況導向諮詢：
 問題需要現場確認
 涉及保固或瑕疵擔保的談判策略
@@ -295,53 +299,4 @@ async function doSend(text) {
     var data = await r.json();
     showThink(false);
     if (data.text) {
-      hist.push({role:'assistant', content:data.text});
-      addMsg(data.text, 'ai');
-      count++;
-      if (count >= 9 && !consultShown) showConsult();
-    } else {
-      addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
-    }
-  } catch(e) {
-    showThink(false);
-    addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
-  }
-}
-
-function send() {
-  if (busy) return;
-  var txt = document.getElementById('txt');
-  var val = txt.value.trim();
-  if (!val) return;
-  txt.value = '';
-  txt.style.height = 'auto';
-  addMsg(val, 'user');
-  doSend(val);
-}
-
-document.getElementById('btn').onclick = send;
-document.getElementById('txt').onkeydown = function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    send();
-  }
-};
-document.getElementById('txt').oninput = function() {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-};
-
-function restart() {
-  hist = [];
-  count = 0;
-  busy = false;
-  consultShown = false;
-  document.getElementById('btn').disabled = false;
-  document.getElementById('chat').innerHTML = '';
-  addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
-}
-
-addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
-</script>
-</body>
-</html>
+      hist.push({role:'assistant', c
