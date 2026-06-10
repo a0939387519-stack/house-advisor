@@ -309,4 +309,52 @@ async function doSend(text) {
     showThink(false);
     if (data.text) {
       hist.push({role:'assistant', content:data.text});
-      addM
+      addMsg(data.text, 'ai');
+      count++;
+      if (count >= 9 && !consultShown) showConsult();
+    } else {
+      addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
+    }
+  } catch(e) {
+    showThink(false);
+    addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
+  }
+}
+
+function send() {
+  if (busy) return;
+  var txt = document.getElementById('txt');
+  var val = txt.value.trim();
+  if (!val) return;
+  txt.value = '';
+  txt.style.height = 'auto';
+  addMsg(val, 'user');
+  doSend(val);
+}
+
+document.getElementById('btn').onclick = send;
+document.getElementById('txt').onkeydown = function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+};
+document.getElementById('txt').oninput = function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+};
+
+function restart() {
+  hist = [];
+  count = 0;
+  busy = false;
+  consultShown = false;
+  document.getElementById('btn').disabled = false;
+  document.getElementById('chat').innerHTML = '';
+  addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+}
+
+addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+</script>
+</body>
+</html>
