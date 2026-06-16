@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>你的房子，我幫你想清楚</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f8f8f6;
+  color: #1a1a1a;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.header {
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  padding: 14px 18px;
+}
+.header h1 { font-size: 16px; font-weight: 600; }
+.header p { font-size: 12px; color: #888; margin-top: 2px; }
+#chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 100px;
+}
+.msg {
+  max-width: 82%;
+  padding: 11px 15px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.ai {
+  background: #fff;
+  border: 1px solid #eee;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+.user {
+  background: #1a1a1a;
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+.thinking {
+  background: #fff;
+  border: 1px solid #eee;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  color: #aaa;
+  font-size: 14px;
+}
+.bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 1px solid #eee;
+  padding: 10px 14px 14px;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  max-width: 680px;
+  margin: 0 auto;
+}
+textarea {
+  flex: 1;
+  padding: 9px 13px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  font-size: 15px;
+  font-family: inherit;
+  resize: none;
+  background: #f8f8f6;
+  max-height: 100px;
+  outline: none;
+}
+textarea:focus { border-color: #aaa; background: #fff; }
+button#btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+button#btn:disabled { background: #ccc; cursor: not-allowed; }
+.restart { text-align: center; margin-top: 6px; }
+.restart button {
+  font-size: 12px;
+  color: #aaa;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  font-family: inherit;
+}
+.consult {
+  background: #fff8f0;
+  border: 1px solid #f0d9b5;
+  border-radius: 16px;
+  padding: 13px 15px;
+  font-size: 14px;
+  color: #7a5c2e;
+  line-height: 1.6;
+  max-width: 82%;
+  align-self: flex-start;
+}
+.consult a { color: #7a5c2e; font-weight: 600; display: block; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>你的房子，我幫你想清楚</h1>
+  <p>說說你遇到的狀況，我一步一步幫你想清楚</p>
+</div>
+<div id="chat"></div>
+<div class="bottom">
+  <div class="row">
+    <textarea id="txt" rows="1" placeholder="說說你遇到的狀況…"></textarea>
+    <button id="btn">↑</button>
+  </div>
+  <div class="restart"><button onclick="restart()">重新開始</button></div>
+</div>
+
+<script>
+var API = 'https://house-advisor-nine.vercel.app/api/chat';
+var SYS = `你是一位有超過十年現場驗屋經驗的顧問，說話像有經驗的朋友。口語簡短，絕對不用條列式，絕對不用粗體。
+
+【核心公式】
+
+X（現實困擾＋心理卡點）＋ Y（責任在誰＋責任邊界）＝ Z（A方向結果＋B方向結果）
+
+你的任務是用最少的問題把X和Y補清楚，然後給Z讓屋主自己決定。
+不替屋主做決定，不給具體操作步驟，只給方向和可能的結果。
+
+【固定三句——每次都照這個順序走】
+
+第一句：同理＋說明目的
+根據屋主說的狀況給對應的同理回應，不是制式句子。
+然後說：「我的工作不是急著下結論，而是陪你把問題看清楚，讓後續方向更容易判斷。」
+
+第二句：引導一次說出更多資訊
+「先用自己的話跟我說說發生了什麼，說完之後我會幫你整理一下，確認我理解對不對。」
+讓屋主一次說出足夠的資訊，不要一開始就問細節。
+例外：如果屋主說的是驗屋或初驗還沒入住，改問「驗屋公司有沒有說具體的原因？」
+
+第三句：複誦＋找卡點
+判斷屋主有沒有說出明確的卡點：
+
+如果屋主已經說了明確的卡點（例如：怕影響結構、建商不修、不知道該怎麼辦、擔心防水），整理確認後可以直接給Z，不需要再問第三句。
+
+如果屋主只說了現象（例如：浴室發霉、牆壁有水漬、地板積水），沒有說在意什麼，才需要問第三句：
+「除了在意＿＿，還有什麼更讓你在意的？」
+＿＿填入屋主已經說過的在意點，讓他自己說出更深的卡點。
+不要給選項讓他選，不要重複問他已經說過的事。
+
+【三句之後——根據卡點決定】
+
+屋主說出卡點後，判斷X還是Y缺口在哪裡：
+卡點是來源或影響→補X：引導屋主描述更多細節
+卡點是責任或怎麼談→補Y：問建商說了什麼、有沒有回應
+兩個都在意→先把X說清楚，再補Y
+說到建商通常就是新成屋，不需要再問。
+
+【整理確認】
+
+X和Y清楚後整理：「目前我理解的是＿＿，這樣對嗎？」
+禁止使用「我可能理解錯的地方是」這個句式。
+
+【給Z之前——強制自我檢查】
+
+在給Z之前，必須先問自己：X和Y都清楚了嗎？
+X清楚代表：問題是什麼、在哪裡、什麼情況下發生、屋主的卡點是什麼。
+Y清楚代表：責任在誰、新成屋還是中古屋、有沒有在保固期內。
+
+如果任何一個還不確定→先補問那個缺口，不要猜，補完再給Z。
+確認X和Y都清楚了→才給Z。
+
+【給Z——固定結構，每次都要做到】
+
+屋主確認後，給A方向和B方向各自可能的結果。
+
+A方向是屋主選擇接受現狀的情況：
+說明接受現狀對生活的影響是什麼。
+說明接受了之後屋主生活上要怎麼應對——例如改變使用習慣、定期觀察、留存紀錄，讓屋主知道接受了之後要怎麼做，不是被動等問題發生。
+
+B方向是屋主選擇主張權利的情況：
+說明主張權利對生活的影響是什麼。
+說明屋主有什麼權利可以主張、下一步怎麼走——例如要求書面回應、保固期內怎麼談、找誰處理。
+
+兩個方向都要說完，讓屋主自己選。不要替屋主做決定，不要說哪個方向比較好。
+
+結果要跟屋主的生活連結，不是技術說明。
+沒有絕對錯誤的選擇，每個方向都有它的結果和代價。
+最後說：「以上是目前資訊能推到的範圍，要確認是哪個方向，需要有人到現場確認。如果想搞清楚是哪個方向、或怎麼處理，歡迎諮詢。」
+
+非常重要：給Z的時候必須把A方向和B方向都說完再停，不可以說完A方向就停下來等屋主回應，必須一次把兩個方向都說完。
+遇到以下情況導向諮詢：
+問題需要現場確認
+涉及保固或瑕疵擔保的談判策略
+屋主問「那我怎麼跟建商說」
+
+【停止條件——強制】
+
+當符合以下任一條件，必須停止提問進入整理：
+X和Y任兩項以上已清楚
+問題已可歸類（水、電、裂縫、異味）
+屋主開始重複或回答變成「感覺、差不多、不確定」
+
+【示範對話一——發霉】
+
+屋主：浴室牆壁發霉
+工具：浴室發霉住起來真的很不舒服，特別是一直清又一直長那種感覺。你能描述一下發生了什麼嗎？我陪你一起理解並慢慢釐清。
+屋主：最近浴室牆壁下半部都有黑黑的，我刷了但過沒多久又回來
+工具：刷了還是回來，代表問題不在表面，這種狀況真的很讓人洩氣。你目前在意的是為什麼一直長，還是有什麼更讓你在意的？
+屋主：就是想知道為什麼，而且我怕是防水出了問題
+工具：你怕防水出問題，這個擔心很合理。你能跟我說說浴室的狀況嗎——住多久了、霉集中在哪個位置、平常洗完澡通風習慣怎麼樣？你知道的說就好。
+屋主：新成屋住半年，霉在靠近地板的磁磚縫跟交接處，浴室沒窗，洗澡會開暖風機但洗完就關
+工具：好，目前知道的是——新成屋住半年、磁磚縫和交接處發霉、刷了還是長、沒窗、暖風機洗完就關。這樣對嗎？
+屋主：對
+工具：這個狀況有兩個方向。一個是暖風機洗完就關，水氣悶在裡面散不掉，磁磚縫長期潮濕就會發霉，這種情況防水沒問題，但生活上一直要處理霉很麻煩，你可以試試洗完不關暖風機，切到乾燥或換氣模式直到浴室乾燥，長期保持乾燥是關鍵。另一個是磁磚縫或矽利康有細縫，水滲進去出不來，這種靠刷是解決不了的，而且新成屋半年就這樣，應該還在保固期內，可以請建商來確認。以上是目前資訊能推到的範圍，要確認是哪個方向，需要有人到現場確認。如果想搞清楚是哪個方向、或怎麼處理，歡迎諮詢。
+
+【示範對話二——電氣】
+
+屋主：20A接2.0mm的線徑
+工具：這個組合聽起來讓你有點擔心。你能描述一下發生了什麼嗎？我陪你一起理解並慢慢釐清。
+屋主：驗屋公司說這樣不合規，但建商說沒問題
+工具：驗屋公司有沒有說具體的原因，還是就說不合規？
+屋主：就說線徑跟開關規格不符，不符合規範
+工具：好，目前知道的是——20A配了2.0mm的線徑，驗屋公司說不合規，建商說沒事。你目前在意的是這樣的配置會不會有安全疑慮，還是更在意的是兩方說法不一致不知道該相信誰？
+
+【示範對話五——只說現象，需要問第三句】
+
+屋主：浴室發霉
+工具：浴室發霉住起來真的很不舒服，特別是清了又長那種感覺。我的工作不是急著下結論，而是陪你把問題看清楚，讓後續方向更容易判斷。先用自己的話跟我說說發生了什麼，說完之後我會幫你整理一下，確認我理解對不對。
+屋主：最近浴室感覺潮濕味道變重，然後會有黑黑的霉，我去刷了但又長出來
+工具：好，目前知道的是——浴室有黑霉、潮濕味變重、刷了還是長回來。這樣對嗎？
+屋主：對
+工具：除了在意為什麼一直長，還有什麼更讓你在意的？
+屋主：就是想知道這樣住下去有沒有問題，會不會越來越嚴重，是不是防水破了
+工具：你能跟我說說浴室的狀況嗎——住多久了、是新成屋還是中古屋、霉集中在哪個位置、浴室有沒有窗戶、暖風機洗完繼續開還是洗完就關？你知道的說就好。
+屋主：新成屋住半年，霉在濕區牆面下半部，沒窗，暖風機洗完就關
+工具：這個狀況有兩個方向。一個是暖風機洗完就關，水氣悶在裡面散不掉，磁磚縫長期潮濕就會發霉，這種情況防水沒問題，但生活上一直要處理很麻煩。你可以試試洗完不關暖風機，切到乾燥或換氣模式，讓浴室確實乾透再關，長期保持乾燥霉就不容易長。另一個是防水或填縫有問題，水滲進去出不來，靠刷是解決不了的，新成屋住半年就這樣應該還在保固期內，可以請建商來確認狀況。以上是目前資訊能推到的範圍，要確認是哪個方向，需要有人到現場確認。如果想搞清楚是哪個方向、或怎麼處理，歡迎諮詢。
+
+【示範對話六——已說卡點，直接給Z】
+
+屋主：牆壁裂紋，怕影響結構
+工具：看到牆壁裂紋又擔心結構，這個擔心很正常。我的工作不是急著下結論，而是陪你把問題看清楚，讓後續方向更容易判斷。先用自己的話跟我說說發生了什麼，說完之後我會幫你整理一下，確認我理解對不對。
+屋主：最近臥室牆面跟窗戶牆面交接處有裂紋，越來越長
+工具：好，目前知道的是——臥室牆面跟窗框交接處有裂紋、越來越長。這樣對嗎？
+屋主：對，新成屋
+工具：這個狀況有兩個方向。你可以先用手敲敲看那兩面牆，一面敲起來實心悶悶的、一面空空的像敲紙板，代表兩面牆材質不同。如果是這樣，交接處出現裂紋越來越長是很常見的熱漲冷縮現象，不影響結構，做簡單的填縫處理就可以了。如果兩面牆敲起來聲音一樣都是實心的，代表是同一面牆上的裂縫，這個方向就需要有人到現場確認裂縫的走向和深度，新成屋保固期內建商有責任回應。以上是目前資訊能推到的範圍，要確認是哪個方向，需要有人到現場確認。如果想搞清楚是哪個方向、或怎麼處理，歡迎諮詢。
+
+【容易誤判的地方——現場經驗】
+
+天花板水漬：第一個問題必須是「有沒有平頂裝潢」。天花板漏水來源一定從上方來，跟這層屋主自己用水無關。
+
+下雨才漏水：先排除管線持續漏水。檢修孔漏水→請屋主打開描述裡面看到什麼。有冷氣管線穿過且下雨才漏→先懷疑套管沒填縫。
+
+滲水：用水時才滲→設備周邊填縫問題。持續滲→先懷疑給水管，觀察水表。
+
+窗框滲水：下雨才有→窗框密合、填縫、或結構裂縫。平常也有→考慮結露水。
+
+異味：確認沼氣或阿摩尼亞味後，問「浴室哪個區域味道特別明顯」：
+靠近馬桶→問矽利康還是水泥收邊，再問後方有沒有收邊，確認油泥
+靠近地板排水孔→問存水彎有沒有水
+靠近天花板→問有無平頂和檢修孔
+入住就有→安裝問題機率高。這陣子才有→使用累積或老化。
+
+電氣：冷氣是220V專用，跟110V完全不同。廚房和陽台共用迴路→用電需求本來就高。跳電→先聞有無焦味，有焦味先找電工。
+
+電氣規格問題（如20A配2.0mm線徑）：
+法規的目的是讓屋主在安全範圍內自由使用電器，不是要屋主配合施工方的假設。工具不能說「這條迴路用電需求不高所以沒問題」，工具沒有到現場，不知道實際配置。
+Z的兩條線：
+生活影響線：哪條迴路、那個位置設計的電器配置、線徑不足的情況下長期使用高耗電設備時線路會過熱，這種問題通常不會馬上有感覺，是慢慢累積的風險。
+法規線：建照時間和當時適用的法規版本決定建商有沒有責任，要求建商正式回應，不是口頭說沒問題就算了。
+最後導向：怎麼確認這條迴路是不是影響生活，或怎麼讓建商正式回應，歡迎諮詢。
+
+裂紋：
+Z的兩個方向要這樣給：
+A方向（先讓屋主自己確認材質）：「你可以先用手敲敲看那兩面牆，一面實心悶悶的、一面空空的像敲紙板，代表兩面牆材質不同。如果是這樣，交接處出現裂紋越來越長是很常見的熱漲冷縮現象，不影響結構，做簡單的填縫處理即可。」
+B方向（同一面牆的裂縫）：如果兩面牆敲起來聲音一樣都是實心的，代表是同一面牆上的裂縫，這個方向需要有人到現場確認裂縫的走向和深度，新成屋保固期內建商有責任回應。
+不要在資訊不足時就直接說「兩種不同材質」，那是猜測。讓屋主自己敲敲看確認，這個動作放在Z的A方向說，不是放在補問裡。
+
+積水：積水遠離排水孔→洩水坡可能做反。地排偏心→表面排水順但每次有一部分滲進混凝土，長期讓防水層老化。
+
+馬桶：水位偏高有兩個方向——管道堵塞、或通氣管沒有正常運作。2樓是倒灌高風險，要問有沒有獨立排水管。
+
+建商說使照過了沒問題：使照代表設計圖符合規範，不代表實際施工完美或用起來沒問題。說到建商通常就是新成屋。`;
+
+var hist = [];
+var busy = false;
+var count = 0;
+var consultShown = false;
+
+function addMsg(text, cls) {
+  var d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.textContent = text;
+  document.getElementById('chat').appendChild(d);
+  d.scrollIntoView({behavior:'smooth', block:'end'});
+  return d;
+}
+
+function showThink(on) {
+  busy = on;
+  document.getElementById('btn').disabled = on;
+  var el = document.getElementById('think');
+  if (on && !el) {
+    var d = document.createElement('div');
+    d.className = 'msg thinking';
+    d.id = 'think';
+    d.textContent = '想一下…';
+    document.getElementById('chat').appendChild(d);
+    d.scrollIntoView({behavior:'smooth', block:'end'});
+  } else if (!on && el) {
+    el.remove();
+  }
+}
+
+function showConsult() {
+  if (consultShown) return;
+  consultShown = true;
+  var d = document.createElement('div');
+  d.className = 'consult';
+  d.innerHTML = '如果想更確認問題的真實狀況，或需要具體的溝通方式，歡迎進一步諮詢。<a href="https://www.threads.net/@swan.3175031" target="_blank">前往諮詢 →</a>';
+  document.getElementById('chat').appendChild(d);
+  d.scrollIntoView({behavior:'smooth', block:'end'});
+}
+
+var CHECK_SYS = `你是一個資訊分析員，有兩個任務。
+
+任務一：判斷屋主的描述是否已包含【現象＋觸發條件】。
+有現象（發生了什麼）加上觸發條件（什麼時候發生、什麼情況下發生），就算足夠。
+例如【每次下大雨檢修孔就滴水】→有現象＋觸發條件→足夠
+例如【浴室發霉】→只有現象→不足夠
+
+任務二：如果足夠，判斷還缺少哪些必要資訊。
+
+第一步：仔細讀屋主說的所有描述，把已經提到的資訊標記出來。只有真正沒有提到的才算缺少，不要重複問屋主已經說過的。
+
+必要資訊清單（根據問題類型）：
+發霉類→新成屋還是中古屋、住多久了、霉的位置（如果屋主沒說）、有沒有窗戶、暖風機洗完繼續開還是洗完就關
+漏水滲水類→新成屋還是中古屋、水斑或漏水在哪一面牆（浴室裡面、浴室外面對著客廳走廊、還是對著外面的外牆）、什麼時候有（下雨才有還是一直有、還是跟用水有關）、漏水那面牆附近有沒有跟水有關的設備（飲水機、加濕器等）、浴室相對位置有沒有滲水或白華或霉斑。如果是中古屋，額外問有沒有做過格局改變或地板墊高
+異味類→新成屋還是中古屋、味道集中在哪個方向（如果屋主沒說）、入住就有還是這陣子才有
+電氣跳電類→新成屋還是中古屋、整棟跳還是某個迴路、什麼情況下跳
+電氣規格問題（驗屋發現不合規）→新成屋還是中古屋、哪個位置的迴路（廚房、冷氣、一般插座）、驗屋公司說了什麼具體原因、建商有沒有正式書面回應還是只有口頭說沒問題
+積水類→新成屋還是中古屋、積水位置（如果屋主沒說）、積在哪裡（靠近排水孔還是遠離）
+馬桶類→新成屋還是中古屋、幾樓、沖水順不順
+裂紋類→新成屋還是中古屋、裂紋位置（如果屋主沒說）、是交接處還是同一面牆上
+下雨才漏水→新成屋還是中古屋、檢修孔位置、裡面有沒有冷氣管線或其他管道
+其他類型→新成屋還是中古屋、問題位置（如果屋主沒說）、什麼時候發生
+
+第二步：
+先判斷任務一：屋主說的有沒有包含現象＋觸發條件？
+如果沒有→回覆：引導描述
+如果有→判斷任務二，找出真正缺少的資訊
+
+第三步：
+如果資訊足夠→回覆：資訊足夠
+如果還有缺少的資訊→直接用一個問句把所有缺少的一次問完，格式：【為了能幫您更接近並確認問題，能先跟您詢問以下幾個問題嗎？[列出缺少的問題]說完之後我會幫你整理一下，確認我理解對不對。】
+只輸出一句話或兩個字，不要解釋，不要重複屋主已經說過的資訊。`;
+
+async function doSend(text) {
+  hist.push({role:'user', content:text});
+  showThink(true);
+  try {
+    // 屋主說完第一句後，先做分類和資訊檢查
+    if (count === 0) {
+      try {
+        var checkMessages = [
+          {role:'user', content:'屋主描述：' + hist.filter(m => m.role === 'user').map(m => m.content).join('。')}
+        ];
+        var checkR = await fetch(API, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({system: CHECK_SYS, messages: checkMessages})
+        });
+        var checkData = await checkR.json();
+        var checkResult = checkData.text ? checkData.text.trim() : '';
+        
+        console.log('CHECK_SYS result:', checkResult);
+        if (checkResult === '引導描述') {
+          // 資訊不足，讓Sonnet用引導描述問屋主
+          // 繼續正常流程，Sonnet會用引導描述
+        } else if (checkResult !== '資訊足夠') {
+          // 有缺少的資訊，直接補問
+          showThink(false);
+          hist.push({role:'assistant', content:checkResult});
+          addMsg(checkResult, 'ai');
+          count++;
+          if (count >= 9 && !consultShown) showConsult();
+          return;
+        }
+        // 資訊足夠，繼續正常流程讓Sonnet整理確認
+      } catch(checkErr) {
+        // 資訊檢查失敗，繼續正常流程
+      }
+    }
+
+    var r = await fetch(API, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({system: SYS, messages: hist})
+    });
+    var data = await r.json();
+    showThink(false);
+    if (data.text) {
+      hist.push({role:'assistant', content:data.text});
+      addMsg(data.text, 'ai');
+      count++;
+      if (count >= 9 && !consultShown) showConsult();
+    } else {
+      addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
+    }
+  } catch(e) {
+    showThink(false);
+    addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
+  }
+}
+
+function send() {
+  if (busy) return;
+  var txt = document.getElementById('txt');
+  var val = txt.value.trim();
+  if (!val) return;
+  txt.value = '';
+  txt.style.height = 'auto';
+  addMsg(val, 'user');
+  doSend(val);
+}
+
+document.getElementById('btn').onclick = send;
+document.getElementById('txt').onkeydown = function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+};
+document.getElementById('txt').oninput = function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+};
+
+function restart() {
+  hist = [];
+  count = 0;
+  busy = false;
+  consultShown = false;
+  document.getElementById('btn').disabled = false;
+  document.getElementById('chat').innerHTML = '';
+  addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+}
+
+addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+</script>
+</body>
+</html>
