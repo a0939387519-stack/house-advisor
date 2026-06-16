@@ -363,6 +363,7 @@ async function doSend(text) {
         var checkData = await checkR.json();
         var checkResult = checkData.text ? checkData.text.trim() : '';
         
+        console.log('CHECK_SYS result:', checkResult);
         if (checkResult === '引導描述') {
           // 資訊不足，讓Sonnet用引導描述問屋主
           // 繼續正常流程，Sonnet會用引導描述
