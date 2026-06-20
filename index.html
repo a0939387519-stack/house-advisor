@@ -270,7 +270,10 @@ X和Y任兩項以上已清楚
 
 天花板水漬：第一個問題必須是「有沒有平頂裝潢」。天花板漏水來源一定從上方來，跟這層屋主自己用水無關。
 
-下雨才漏水：先排除管線持續漏水。檢修孔漏水→請屋主打開描述裡面看到什麼。有冷氣管線穿過且下雨才漏→先懷疑套管沒填縫。
+下雨才漏水：下雨才漏代表外面有水找到了進來的路，不是管線持續漏水的問題。不要猜是哪根管子，方向是「對外有開口沒封好」。
+Z的兩個方向：
+A方向（先確認）：觀察漏水的位置，找這個位置對外的相對應開孔——可能是冷氣管線穿出去的地方、排水管穿牆的地方、管道間的對外面。找到開孔才知道水從哪裡進來、要找誰處理。靠室內表面處理是解決不了的，源頭沒封住還是會漏。
+B方向（主張責任）：確認開孔是哪個工程留下的——冷氣廠商的套管→找冷氣廠商、建商施工留下的穿梁→找建商、公共管道間沒封實→找建商或管委會。責任不同找的人不同，但都要要求書面說明修繕方案，不是口頭說沒問題就算了。新成屋在保固期內，屋主有權利要求建商找到源頭並封好，不是只從室內打針治標。
 
 滲水：用水時才滲→設備周邊填縫問題。持續滲→先懷疑給水管，觀察水表。
 
@@ -380,8 +383,9 @@ async function doSend(text) {
   hist.push({role:'user', content:text});
   showThink(true);
   try {
-    // 第一輪屋主說完後，先做分類和資訊檢查
-    if (count === 1) {
+    // 屋主說第一句話後，先做分類和資訊檢查，把結果傳給Sonnet決定第一句怎麼說
+    if (count === 0) {
+      console.log("CHECK_SYS block entered");
       try {
         var checkMessages = [
           {role:'user', content:'屋主描述：' + hist.filter(m => m.role === 'user').map(m => m.content).join('。')}
@@ -394,21 +398,22 @@ async function doSend(text) {
         var checkData = await checkR.json();
         var checkResult = checkData.text ? checkData.text.trim() : '';
         
-        console.log('CHECK_SYS result:', checkResult);
-        if (checkResult === '引導描述') {
-          // 資訊不足，讓Sonnet用引導描述問屋主
-          // 繼續正常流程，Sonnet會用引導描述
-        } else if (checkResult !== '資訊足夠') {
-          // 有缺少的資訊，直接補問
+        // 清理checkResult，移除【】括號
+        var cleanResult = checkResult.replace(/[【】]/g, '');
+        
+        if (cleanResult !== '引導描述' && cleanResult !== '資訊足夠') {
+          // 有補問句，同理屋主感受後直接顯示補問句，不讓Sonnet跑
           showThink(false);
-          hist.push({role:'assistant', content:checkResult});
-          addMsg(checkResult, 'ai');
-          count++;
-          if (count >= 9 && !consultShown) showConsult();
-          return;
+          // 先讓Sonnet說同理，再加補問句
+          var lastUserMsg = hist[hist.length - 1];
+          lastUserMsg.content = lastUserMsg.content + "\n\n[指示：屋主說的資訊已包含現象和觸發條件。請先用一句話同理屋主的感受，然後直接說以下補問句，不要說引導描述：" + cleanResult + "]";
+        } else if (cleanResult === '資訊足夠') {
+          var lastUserMsg = hist[hist.length - 1];
+          lastUserMsg.content = lastUserMsg.content + "\n\n[指示：屋主說的資訊已足夠，請直接同理屋主的感受，然後整理確認目前知道的狀況，不要說引導描述]";
         }
-        // 資訊足夠，繼續正常流程讓Sonnet整理確認
+        // 引導描述：繼續正常流程，Sonnet會說引導描述
       } catch(checkErr) {
+        console.error("CHECK_SYS failed:", checkErr);
         // 資訊檢查失敗，繼續正常流程
       }
     }
