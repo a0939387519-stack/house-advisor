@@ -192,7 +192,7 @@ button#btn:disabled { background: #ccc; cursor: not-allowed; }
 <div class="bottom">
   <div id="preview" class="preview-wrap"></div>
   <div class="row">
-    <button class="upload-btn" onclick="document.getElementById('fileInput').click()" title="上傳照片或PDF">📎</button>
+    <button class="upload-btn" id="uploadBtn" title="上傳照片或PDF">📎</button>
     <textarea id="txt" rows="1" placeholder="說說你遇到的狀況…"></textarea>
     <button id="btn">↑</button>
   </div>
@@ -596,6 +596,22 @@ async function doSend(text) {
 
 // File upload handling
 var pendingFiles = []; // {type: 'image'|'pdf', data: base64, mediaType, name}
+
+window.addEventListener('load', function() {
+  var uploadBtn = document.getElementById('uploadBtn');
+  var fileInput = document.getElementById('fileInput');
+  
+  uploadBtn.addEventListener('click', function() {
+    fileInput.value = '';
+    fileInput.click();
+  });
+  
+  fileInput.addEventListener('change', function() {
+    if (this.files && this.files.length > 0) {
+      handleFiles({target: {files: this.files}});
+    }
+  });
+});
 
 function handleFiles(e) {
   var files = Array.from(e.target.files);
