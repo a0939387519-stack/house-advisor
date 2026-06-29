@@ -597,10 +597,6 @@ async function doSend(text) {
 // File upload handling
 var pendingFiles = []; // {type: 'image'|'pdf', data: base64, mediaType, name}
 
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('fileInput').addEventListener('change', handleFiles);
-});
-
 function handleFiles(e) {
   var files = Array.from(e.target.files);
   files.forEach(function(file) {
@@ -675,9 +671,11 @@ function restart() {
   document.getElementById('btn').disabled = false;
   document.getElementById('chat').innerHTML = '';
   addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+document.getElementById('fileInput').addEventListener('change', handleFiles);
 }
 
 addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+document.getElementById('fileInput').addEventListener('change', handleFiles);
 </script>
 </body>
 </html>
