@@ -196,7 +196,7 @@ button#btn:disabled { background: #ccc; cursor: not-allowed; }
     <textarea id="txt" rows="1" placeholder="說說你遇到的狀況…"></textarea>
     <button id="btn">↑</button>
   </div>
-  <input type="file" id="fileInput" accept="image/*,.pdf" multiple style="display:none">
+  <input type="file" id="fileInput" accept="image/*,.pdf" multiple style="display:none" onchange="handleFiles(event)">
   <div class="restart"><button onclick="restart()">重新開始</button></div>
 </div>
 
@@ -671,11 +671,11 @@ function restart() {
   document.getElementById('btn').disabled = false;
   document.getElementById('chat').innerHTML = '';
   addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
-document.getElementById('fileInput').addEventListener('change', handleFiles);
+
 }
 
 addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
-document.getElementById('fileInput').addEventListener('change', handleFiles);
+
 </script>
 </body>
 </html>
