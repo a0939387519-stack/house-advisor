@@ -658,11 +658,12 @@ function send() {
   if (busy) return;
   var txt = document.getElementById('txt');
   var val = txt.value.trim();
-  if (!val) return;
+  if (!val && pendingFiles.length === 0) return;
   txt.value = '';
   txt.style.height = 'auto';
-  addMsg(val, 'user');
-  doSend(val);
+  var displayText = val || '（傳送了' + pendingFiles.length + '張圖片）';
+  addMsg(displayText, 'user');
+  doSend(val || '請根據我傳送的照片或檔案，描述你看到的內容，然後問我這讓我最擔心的是什麼。');
 }
 
 document.getElementById('btn').onclick = send;
