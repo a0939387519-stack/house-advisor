@@ -433,6 +433,44 @@ function addMsg(text, cls) {
   return d;
 }
 
+function addMsgWithImages(text, cls, files) {
+  var d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  if (text) {
+    var textNode = document.createElement('div');
+    textNode.textContent = text;
+    d.appendChild(textNode);
+  }
+  if (files && files.length > 0) {
+    var imgWrap = document.createElement('div');
+    imgWrap.style.display = 'flex';
+    imgWrap.style.flexWrap = 'wrap';
+    imgWrap.style.gap = '6px';
+    imgWrap.style.marginTop = text ? '8px' : '0';
+    files.forEach(function(f) {
+      if (f.type === 'image') {
+        var img = document.createElement('img');
+        img.src = 'data:' + f.mediaType + ';base64,' + f.data;
+        img.style.height = '80px';
+        img.style.borderRadius = '8px';
+        imgWrap.appendChild(img);
+      } else {
+        var tag = document.createElement('div');
+        tag.style.background = 'rgba(255,255,255,0.2)';
+        tag.style.borderRadius = '8px';
+        tag.style.padding = '6px 10px';
+        tag.style.fontSize = '13px';
+        tag.textContent = '📄 ' + f.name;
+        imgWrap.appendChild(tag);
+      }
+    });
+    d.appendChild(imgWrap);
+  }
+  document.getElementById('chat').appendChild(d);
+  d.scrollIntoView({behavior:'smooth', block:'end'});
+  return d;
+}
+
 function showThink(on) {
   busy = on;
   document.getElementById('btn').disabled = on;
@@ -661,8 +699,11 @@ function send() {
   if (!val && pendingFiles.length === 0) return;
   txt.value = '';
   txt.style.height = 'auto';
-  var displayText = val || '（傳送了' + pendingFiles.length + '張圖片）';
-  addMsg(displayText, 'user');
+  
+  var fileNote = pendingFiles.length > 0 ? '📎 已傳送 ' + pendingFiles.length + ' 個檔案' : '';
+  var displayText = val ? (fileNote ? val + '\n\n' + fileNote : val) : (fileNote || '');
+  
+  addMsgWithImages(displayText, 'user', pendingFiles.slice());
   doSend(val || '請根據我傳送的照片或檔案，描述你看到的內容，然後問我這讓我最擔心的是什麼。');
 }
 
