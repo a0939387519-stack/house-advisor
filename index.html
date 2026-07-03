@@ -639,8 +639,13 @@ async function doSend(text) {
       // Decision Gate——只在Sonnet想收斂的時候觸發
       if (count > 0 && (responseText.includes('以上是目前') || responseText.includes('歡迎諮詢') || responseText.includes('歡迎進一步') || responseText.includes('需要有人到現場'))) {
         try {
-          // 只送最後6輪給Gate，避免太長，清除指示標記和圖片格式
+          // 只送最後6輪給Gate，確保從user開始，清除指示標記和圖片格式
           var recentHist = hist.slice(-6);
+          // 確保第一筆是user
+          while (recentHist.length > 0 && recentHist[0].role !== 'user') {
+            recentHist = recentHist.slice(1);
+          }
+          if (recentHist.length === 0) recentHist = [{role:'user', content:'請根據對話判斷'}];
           var gateMessages = recentHist.map(function(m) {
             var text = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join(' ') : String(m.content));
             var idx = text.indexOf('[指示：');
