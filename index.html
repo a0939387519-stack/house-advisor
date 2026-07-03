@@ -639,14 +639,14 @@ async function doSend(text) {
       // Decision Gate——只在Sonnet想收斂的時候觸發
       if (count > 0 && (responseText.includes('以上是目前') || responseText.includes('歡迎諮詢') || responseText.includes('歡迎進一步') || responseText.includes('需要有人到現場'))) {
         try {
-          // 只送純文字給Gate，清除指示標記和圖片格式
-          var gateMessages = hist.map(function(m) {
+          // 只送最後6輪給Gate，避免太長，清除指示標記和圖片格式
+          var recentHist = hist.slice(-6);
+          var gateMessages = recentHist.map(function(m) {
             var text = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join(' ') : String(m.content));
-            // 清除 [指示：...] 這類注入的指示
             var idx = text.indexOf('[指示：');
             if (idx > -1) text = text.slice(0, idx).trim();
             return {role: m.role, content: text || '(略)'};
-          }).concat([{role:'assistant', content:responseText}]);
+          }).concat([{role:'assistant', content:responseText.slice(0, 500)}]);
           var gateBody = {
             system: '你是一個診斷閘門。根據對話歷史判斷是否還有可以靠問使用者排除的合理可能性。只輸出JSON：{"can_conclude":true,"reason":"原因"} 或 {"can_conclude":false,"reason":"還需確認什麼"}',
             messages: gateMessages
