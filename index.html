@@ -663,7 +663,7 @@ async function doSend(text) {
                 var forceR = await fetch(API, {
                   method: 'POST',
                   headers: {'Content-Type':'application/json'},
-                  body: JSON.stringify({system: SYS, messages: forceR_messages = forceMsg})
+                  body: JSON.stringify({system: SYS, messages: forceMsg})
                 });
                 var forceData = await forceR.json();
                 if (forceData.text) {
