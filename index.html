@@ -645,8 +645,7 @@ async function doSend(text) {
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({
               system: '你是一個診斷閘門。根據對話歷史，判斷目前是否還有合理的可能性可以靠繼續問使用者來排除。\n\n如果還有合理可能性可以靠問使用者排除→ can_conclude: false\n如果剩下的可能性都只有現場才能確認→ can_conclude: true\n\n只輸出JSON，不要其他文字：\n{"can_conclude": true, "reason": "一句話說明原因"}\n或\n{"can_conclude": false, "reason": "一句話說明還需要確認什麼"}',
-              messages: gateMessages,
-              max_tokens: 200
+              messages: gateMessages
             })
           });
           var gateData = await gateR.json();
