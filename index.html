@@ -639,7 +639,13 @@ async function doSend(text) {
       // Decision Gate——只在Sonnet想收斂的時候觸發
       if (count > 0 && (responseText.includes('以上是目前資訊能推到的範圍') || responseText.includes('歡迎諮詢') || responseText.includes('歡迎進一步'))) {
         try {
-          var gateMessages = hist.concat([{role:'assistant', content:responseText}]);
+          // 只送純文字給Gate，避免圖片格式造成問題
+          var gateMessages = hist.map(function(m) {
+            return {
+              role: m.role,
+              content: typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join(' ') : String(m.content))
+            };
+          }).concat([{role:'assistant', content:responseText}]);
           var gateR = await fetch(API, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
