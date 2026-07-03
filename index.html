@@ -637,7 +637,7 @@ async function doSend(text) {
       var responseText = data.text;
       
       // Decision Gate——只在Sonnet想收斂的時候觸發
-      if (count > 0 && (responseText.includes('以上是目前資訊能推到的範圍') || responseText.includes('歡迎諮詢') || responseText.includes('歡迎進一步'))) {
+      if (count > 0 && (responseText.includes('以上是目前') || responseText.includes('歡迎諮詢') || responseText.includes('歡迎進一步') || responseText.includes('需要有人到現場'))) {
         try {
           // 只送純文字給Gate，避免圖片格式造成問題
           var gateMessages = hist.map(function(m) {
@@ -646,13 +646,15 @@ async function doSend(text) {
               content: typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join(' ') : String(m.content))
             };
           }).concat([{role:'assistant', content:responseText}]);
+          var gateBody = {
+            system: '你是一個診斷閘門。根據對話歷史判斷是否還有可以靠問使用者排除的合理可能性。只輸出JSON：{"can_conclude":true,"reason":"原因"} 或 {"can_conclude":false,"reason":"還需確認什麼"}',
+            messages: gateMessages
+          };
+          console.log('Gate body:', JSON.stringify(gateBody).slice(0,200));
           var gateR = await fetch(API, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({
-              system: '你是一個診斷閘門。根據對話歷史，判斷目前是否還有合理的可能性可以靠繼續問使用者來排除。\n\n如果還有合理可能性可以靠問使用者排除→ can_conclude: false\n如果剩下的可能性都只有現場才能確認→ can_conclude: true\n\n只輸出JSON，不要其他文字：\n{"can_conclude": true, "reason": "一句話說明原因"}\n或\n{"can_conclude": false, "reason": "一句話說明還需要確認什麼"}',
-              messages: gateMessages
-            })
+            body: JSON.stringify(gateBody)
           });
           var gateData = await gateR.json();
           if (gateData.text) {
