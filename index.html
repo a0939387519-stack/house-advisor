@@ -634,8 +634,53 @@ async function doSend(text) {
     var data = await r.json();
     showThink(false);
     if (data.text) {
-      hist.push({role:'assistant', content:data.text});
-      addMsg(data.text, 'ai');
+      var responseText = data.text;
+      
+      // Decision Gate——只在Sonnet想收斂的時候觸發
+      if (count > 0 && (responseText.includes('以上是目前資訊能推到的範圍') || responseText.includes('歡迎諮詢') || responseText.includes('歡迎進一步'))) {
+        try {
+          var gateMessages = hist.concat([{role:'assistant', content:responseText}]);
+          var gateR = await fetch(API, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+              system: '你是一個診斷閘門。根據對話歷史，判斷目前是否還有合理的可能性可以靠繼續問使用者來排除。\n\n如果還有合理可能性可以靠問使用者排除→ can_conclude: false\n如果剩下的可能性都只有現場才能確認→ can_conclude: true\n\n只輸出JSON，不要其他文字：\n{"can_conclude": true, "reason": "一句話說明原因"}\n或\n{"can_conclude": false, "reason": "一句話說明還需要確認什麼"}',
+              messages: gateMessages,
+              max_tokens: 200
+            })
+          });
+          var gateData = await gateR.json();
+          if (gateData.text) {
+            try {
+              var clean = gateData.text.replace(/```json|```/g, '').trim();
+              var gate = JSON.parse(clean);
+              if (!gate.can_conclude) {
+                // 還有可以靠問使用者排除的可能性，強制繼續問
+                var forceMsg = hist.concat([
+                  {role:'assistant', content:responseText},
+                  {role:'user', content:'[指示：Decision Gate判斷目前還有合理可能性可以排除：' + (gate.reason||'') + '。請不要收斂，繼續問一個能幫助排除的關鍵問題，不要給最終方向。]'}
+                ]);
+                var forceR = await fetch(API, {
+                  method: 'POST',
+                  headers: {'Content-Type':'application/json'},
+                  body: JSON.stringify({system: SYS, messages: forceR_messages = forceMsg})
+                });
+                var forceData = await forceR.json();
+                if (forceData.text) {
+                  responseText = forceData.text;
+                }
+              }
+            } catch(parseErr) {
+              console.log('Gate parse error, proceeding:', parseErr);
+            }
+          }
+        } catch(gateErr) {
+          console.log('Gate failed, proceeding:', gateErr);
+        }
+      }
+      
+      hist.push({role:'assistant', content:responseText});
+      addMsg(responseText, 'ai');
       count++;
       if (count >= 9 && !consultShown) showConsult();
     } else {
