@@ -663,10 +663,12 @@ async function doSend(text) {
             body: JSON.stringify(gateBody)
           });
           var gateData = await gateR.json();
+          console.log('Gate result:', gateData.text ? gateData.text.slice(0,100) : 'no text');
           if (gateData.text) {
             try {
               var clean = gateData.text.replace(/```json|```/g, '').trim();
               var gate = JSON.parse(clean);
+              console.log('Gate parsed:', gate.can_conclude, gate.reason);
               if (!gate.can_conclude) {
                 // 還有可以靠問使用者排除的可能性，強制繼續問
                 var forceMsg = hist.concat([
