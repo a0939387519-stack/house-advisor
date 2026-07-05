@@ -651,7 +651,7 @@ async function doSend(text) {
             var idx = text.indexOf('[指示：');
             if (idx > -1) text = text.slice(0, idx).trim();
             return {role: m.role, content: text || '(略)'};
-          }).concat([{role:'assistant', content:responseText.slice(0, 500)}]);
+          }).concat([{role:'user', content:'[工具回覆：' + responseText.slice(0, 200) + '] 請判斷目前還有沒有合理可能性可以靠問使用者排除？'}]);
           var gateBody = {
             system: '你是一個診斷閘門。根據對話歷史判斷是否還有可以靠問使用者排除的合理可能性。只輸出JSON：{"can_conclude":true,"reason":"原因"} 或 {"can_conclude":false,"reason":"還需確認什麼"}',
             messages: gateMessages
