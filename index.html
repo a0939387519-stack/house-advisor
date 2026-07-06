@@ -625,6 +625,7 @@ async function doSend(text) {
     });
     pendingFiles = [];
     renderPreviews();
+    try { document.getElementById('fileInput').value = ''; } catch(e) {}
 
     var r = await fetch(API, {
       method: 'POST',
