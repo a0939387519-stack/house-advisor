@@ -795,6 +795,30 @@ document.getElementById('txt').oninput = function() {
   this.style.height = Math.min(this.scrollHeight, 100) + 'px';
 };
 
+function saveToStorage() {
+  try {
+    var toSave = hist.map(function(m) {
+      if (typeof m.content === 'string') return m;
+      var textContent = Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('') : String(m.content);
+      return {role: m.role, content: textContent};
+    });
+    localStorage.setItem('ha_hist', JSON.stringify(toSave));
+    localStorage.setItem('ha_count', String(count));
+  } catch(e) {}
+}
+
+function loadFromStorage() {
+  try {
+    var h = localStorage.getItem('ha_hist');
+    var c = localStorage.getItem('ha_count');
+    if (h && c) {
+      var parsed = JSON.parse(h);
+      if (parsed.length > 0) return {hist: parsed, count: parseInt(c)};
+    }
+  } catch(e) {}
+  return null;
+}
+
 function restart() {
   hist = [];
   count = 0;
@@ -802,13 +826,32 @@ function restart() {
   consultShown = false;
   pendingFiles = [];
   renderPreviews();
+  try { localStorage.removeItem('ha_hist'); localStorage.removeItem('ha_count'); } catch(e) {}
   document.getElementById('btn').disabled = false;
   document.getElementById('chat').innerHTML = '';
   addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
-
 }
 
-addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+// Init: try to restore previous conversation
+var saved = loadFromStorage();
+if (saved && saved.hist.length > 0) {
+  hist = saved.hist;
+  count = saved.count;
+  hist.forEach(function(m) {
+    addMsg(m.content, m.role === 'user' ? 'user' : 'ai');
+  });
+  var notice = document.createElement('div');
+  notice.style.cssText = 'text-align:center;font-size:12px;color:#aaa;padding:6px;';
+  notice.textContent = '↑ 上次的對話記錄　　';
+  var clearBtn = document.createElement('button');
+  clearBtn.textContent = '清除';
+  clearBtn.style.cssText = 'font-size:11px;padding:2px 8px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;cursor:pointer;';
+  clearBtn.onclick = restart;
+  notice.appendChild(clearBtn);
+  document.getElementById('chat').insertBefore(notice, document.getElementById('chat').firstChild);
+} else {
+  addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+}
 
 </script>
 </body>
