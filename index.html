@@ -637,7 +637,7 @@ async function doSend(text) {
       var responseText = data.text;
       
       // Decision Gate——只在Sonnet想收斂的時候觸發
-      if (count > 0 && (responseText.includes('以上是目前') || responseText.includes('歡迎諮詢') || responseText.includes('歡迎進一步') || responseText.includes('需要有人到現場'))) {
+      if (count > 0 && (responseText.includes('以上是目前') || responseText.includes('歡迎諮詢') || responseText.includes('歡迎進一步') || responseText.includes('需要有人到現場') || responseText.includes('比較支持的方向') || responseText.includes('目前合理的可能') || responseText.includes('第一個是') || responseText.includes('有兩個方向') || responseText.includes('有幾個方向'))) {
         try {
           // 只送最後6輪給Gate，確保從user開始，清除指示標記和圖片格式
           var recentHist = hist.slice(-6);
@@ -697,6 +697,7 @@ async function doSend(text) {
       hist.push({role:'assistant', content:responseText});
       addMsg(responseText, 'ai');
       count++;
+      saveToStorage();
       if (count >= 9 && !consultShown) showConsult();
     } else {
       addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
