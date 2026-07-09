@@ -498,7 +498,11 @@ var consultShown = false;
 function addMsg(text, cls) {
   var d = document.createElement('div');
   d.className = 'msg ' + cls;
-  d.textContent = text;
+  // 處理換行符號
+  text.split('\n').forEach(function(line, i) {
+    if (i > 0) d.appendChild(document.createElement('br'));
+    d.appendChild(document.createTextNode(line));
+  });
   document.getElementById('chat').appendChild(d);
   d.scrollIntoView({behavior:'smooth', block:'end'});
   return d;
