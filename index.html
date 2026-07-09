@@ -703,11 +703,13 @@ async function doSend(text) {
       // 嘗試解析結構化輸出
       try {
         var cleanRaw = rawText.replace(/```json|```/g, '').trim();
-        // 找到JSON物件
-        var jsonMatch = cleanRaw.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          var parsed = JSON.parse(jsonMatch[0]);
-          if (parsed.response) {
+        // 找到最外層的JSON物件（可能在文字前後）
+        var firstBrace = cleanRaw.indexOf('{');
+        var lastBrace = cleanRaw.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          var jsonStr = cleanRaw.slice(firstBrace, lastBrace + 1);
+          var parsed = JSON.parse(jsonStr);
+          if (parsed.response !== undefined) {
             responseText = parsed.response;
             hasCheckpoint = !!parsed.has_checkpoint;
             hasConclusion = !!parsed.has_conclusion;
