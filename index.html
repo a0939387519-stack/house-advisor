@@ -205,7 +205,14 @@ var API = 'https://house-advisor-nine.vercel.app/api/chat';
 var SYS = `你是一位有超過十年現場驗屋經驗的顧問，說話像有經驗的朋友。口語簡短，絕對不用條列式，絕對不用粗體。
 
 【嚴格規則——輸出格式】
-你的回覆只能是你要對使用者說的話本身，絕對不能包含「屋主：」「工具：」這種對話標記，也不能在回覆裡寫出使用者可能會說的下一句話。下面的示範對話只是給你參考判斷邏輯用的，不是要你模仿格式。
+你的每次回覆必須用以下JSON格式輸出，不能有其他格式：
+{"has_checkpoint":true或false,"has_conclusion":true或false,"response":"你要對使用者說的話"}
+
+has_checkpoint：如果這次回覆包含「請去確認XXX」「可以去看看XXX」「建議先確認XXX」這類具體的檢查動作，設為true，否則false。
+has_conclusion：如果這次回覆包含「目前比較支持」「比較可能的方向是」「目前最值得確認的是XXX原因」這類推論結論，設為true，否則false。
+response：你要對使用者說的實際內容，不包含JSON標記。
+
+絕對不能在response裡包含「屋主：」「工具：」這種對話標記，也不能在response裡寫出使用者可能會說的下一句話。
 
 【照片判讀規則——位置必須由使用者確認】
 
@@ -688,64 +695,99 @@ async function doSend(text) {
     var data = await r.json();
     showThink(false);
     if (data.text) {
-      var responseText = data.text;
+      var rawText = data.text;
+      var responseText = rawText;
+      var hasCheckpoint = false;
+      var hasConclusion = false;
       
-      // Decision Gate——只在Sonnet想收斂的時候觸發
-      if (count > 0 && (responseText.includes('以上是目前') || responseText.includes('歡迎諮詢') || responseText.includes('歡迎進一步') || responseText.includes('需要有人到現場') || responseText.includes('比較支持的方向') || responseText.includes('目前合理的可能') || responseText.includes('第一個是') || responseText.includes('有兩個方向') || responseText.includes('有幾個方向'))) {
-        try {
-          // 只送最後6輪給Gate，確保從user開始，清除指示標記和圖片格式
-          var recentHist = hist.slice(-6);
-          // 確保第一筆是user
-          while (recentHist.length > 0 && recentHist[0].role !== 'user') {
-            recentHist = recentHist.slice(1);
+      // 嘗試解析結構化輸出
+      try {
+        var cleanRaw = rawText.replace(/```json|```/g, '').trim();
+        // 找到JSON物件
+        var jsonMatch = cleanRaw.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          var parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.response) {
+            responseText = parsed.response;
+            hasCheckpoint = !!parsed.has_checkpoint;
+            hasConclusion = !!parsed.has_conclusion;
+            console.log('Structured output:', hasCheckpoint, hasConclusion);
           }
+        }
+      } catch(parseErr) {
+        // 解析失敗，直接用原始文字
+        console.log('Not structured output, using raw text');
+      }
+      
+      // 中間Gate——確認檢查點是否合理
+      if (hasCheckpoint && count > 0) {
+        try {
+          var cpGateMsg = [{role:'user', content:'對話到目前：工具說「' + responseText.slice(0,300) + '」這個檢查點，屋主自己能去確認，還是只有現場才能確認？回答JSON：{"user_can_check":true或false,"reason":"原因"}'}];
+          var cpR = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是檢查點評估器。只輸出JSON，不要其他文字。', messages:cpGateMsg})});
+          var cpData = await cpR.json();
+          if (cpData.text) {
+            try {
+              var cpClean = cpData.text.replace(/```json|```/g,'').trim();
+              var cpMatch = cpClean.match(/\{[\s\S]*\}/);
+              if (cpMatch) {
+                var cpGate = JSON.parse(cpMatch[0]);
+                console.log('Checkpoint Gate:', cpGate.user_can_check, cpGate.reason);
+                if (!cpGate.user_can_check) {
+                  // 檢查點屋主無法自己確認，修改回覆
+                  responseText = responseText + '\n\n這個部分需要有人到現場才能確認，無法靠描述判斷。';
+                }
+              }
+            } catch(e) { console.log('CP Gate parse error'); }
+          }
+        } catch(e) { console.log('CP Gate failed'); }
+      }
+      
+      // 最後Gate——方向和原因有沒有足夠排除依據
+      if (hasConclusion && count > 0) {
+        try {
+          var recentHist = hist.slice(-6);
+          while (recentHist.length > 0 && recentHist[0].role !== 'user') recentHist = recentHist.slice(1);
           if (recentHist.length === 0) recentHist = [{role:'user', content:'請根據對話判斷'}];
-          var gateMessages = recentHist.map(function(m) {
+          var conGateMessages = recentHist.map(function(m) {
             var text = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join(' ') : String(m.content));
             var idx = text.indexOf('[指示：');
             if (idx > -1) text = text.slice(0, idx).trim();
             return {role: m.role, content: text || '(略)'};
-          }).concat([{role:'user', content:'[工具回覆：' + responseText.slice(0, 200) + '] 請判斷目前還有沒有合理可能性可以靠問使用者排除？'}]);
-          var gateBody = {
-            system: '你是一個診斷閘門。根據對話歷史判斷是否還有可以靠問使用者排除的合理可能性。只輸出JSON：{"can_conclude":true,"reason":"原因"} 或 {"can_conclude":false,"reason":"還需確認什麼"}',
-            messages: gateMessages
-          };
-          console.log('Gate body:', JSON.stringify(gateBody).slice(0,200));
-          var gateR = await fetch(API, {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify(gateBody)
-          });
-          var gateData = await gateR.json();
-          console.log('Gate result:', gateData.text ? gateData.text.slice(0,100) : 'no text');
-          if (gateData.text) {
+          }).concat([{role:'user', content:'工具準備說：「' + responseText.slice(0,200) + '」目前是否已有足夠排除依據支持這個結論？回答JSON：{"sufficient":true或false,"reason":"原因"}'}]);
+          var conR = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是結論評估器。只輸出JSON，不要其他文字。', messages:conGateMessages})});
+          var conData = await conR.json();
+          if (conData.text) {
             try {
-              var clean = gateData.text.replace(/```json|```/g, '').trim();
-              var gate = JSON.parse(clean);
-              console.log('Gate parsed:', gate.can_conclude, gate.reason);
-              if (!gate.can_conclude) {
-                // 還有可以靠問使用者排除的可能性，強制繼續問
-                var forceMsg = hist.concat([
-                  {role:'assistant', content:responseText},
-                  {role:'user', content:'[指示：Decision Gate判斷目前還有合理可能性可以排除：' + (gate.reason||'') + '。請不要收斂，繼續問一個能幫助排除的關鍵問題，不要給最終方向。]'}
-                ]);
-                var forceR = await fetch(API, {
-                  method: 'POST',
-                  headers: {'Content-Type':'application/json'},
-                  body: JSON.stringify({system: SYS, messages: forceMsg})
-                });
-                var forceData = await forceR.json();
-                if (forceData.text) {
-                  responseText = forceData.text;
+              var conClean = conData.text.replace(/```json|```/g,'').trim();
+              var conMatch = conClean.match(/\{[\s\S]*\}/);
+              if (conMatch) {
+                var conGate = JSON.parse(conMatch[0]);
+                console.log('Conclusion Gate:', conGate.sufficient, conGate.reason);
+                if (!conGate.sufficient) {
+                  // 排除依據不足，強制繼續問
+                  var forceMsg = hist.concat([
+                    {role:'assistant', content:responseText},
+                    {role:'user', content:'[指示：排除依據不足，不能給結論。請繼續問一個能幫助排除的關鍵問題：' + (conGate.reason||'') + ']'}
+                  ]);
+                  var forceR = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:SYS, messages:forceMsg})});
+                  var forceData = await forceR.json();
+                  if (forceData.text) {
+                    try {
+                      var forceClean = forceData.text.replace(/```json|```/g,'').trim();
+                      var forceMatch = forceClean.match(/\{[\s\S]*\}/);
+                      if (forceMatch) {
+                        var forceParsed = JSON.parse(forceMatch[0]);
+                        if (forceParsed.response) responseText = forceParsed.response;
+                      } else {
+                        responseText = forceData.text;
+                      }
+                    } catch(e) { responseText = forceData.text; }
+                  }
                 }
               }
-            } catch(parseErr) {
-              console.log('Gate parse error, proceeding:', parseErr);
-            }
+            } catch(e) { console.log('Conclusion Gate parse error'); }
           }
-        } catch(gateErr) {
-          console.log('Gate failed, proceeding:', gateErr);
-        }
+        } catch(e) { console.log('Conclusion Gate failed'); }
       }
       
       hist.push({role:'assistant', content:responseText});
