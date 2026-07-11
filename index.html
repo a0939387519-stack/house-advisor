@@ -201,7 +201,7 @@ button#btn:disabled { background: #ccc; cursor: not-allowed; }
 </div>
 
 <script>
-var API = 'https://house-advisor-ocfo.vercel.app/api/chat';
+var API = 'https://house-advisor-nine.vercel.app/api/chat';
 var SYS = `你是一位有超過十年現場驗屋經驗的顧問，說話像有經驗的朋友。口語簡短，絕對不用條列式，絕對不用粗體。
 
 【嚴格規則——輸出格式】
@@ -750,11 +750,14 @@ async function doSend(text) {
       // 嘗試解析結構化輸出
       try {
         var cleanRaw = rawText.replace(/```json|```/g, '').trim();
-        // 找到最外層的JSON物件（可能在文字前後）
         var firstBrace = cleanRaw.indexOf('{');
         var lastBrace = cleanRaw.lastIndexOf('}');
         if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
           var jsonStr = cleanRaw.slice(firstBrace, lastBrace + 1);
+          // 修正response欄位裡的真實換行符號
+          jsonStr = jsonStr.replace(/("response"\s*:\s*")([\s\S]*?)("(?:\s*,|\s*\}))/g, function(match, pre, content, post) {
+            return pre + content.replace(/\n/g, '\\n').replace(/\r/g, '') + post;
+          });
           var parsed = JSON.parse(jsonStr);
           if (parsed.response !== undefined) {
             responseText = parsed.response;
@@ -764,7 +767,6 @@ async function doSend(text) {
           }
         }
       } catch(parseErr) {
-        // 解析失敗，直接用原始文字
         console.log('Not structured output, using raw text');
       }
       
