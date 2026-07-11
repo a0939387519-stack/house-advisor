@@ -38,7 +38,8 @@ module.exports = async function handler(req, res) {
     });
     var data = await response.json();
     if (!response.ok) {
-      return res.status(response.status).json({ error: data.error ? data.error.message : 'API error' });
+      console.error('Anthropic error:', JSON.stringify(data));
+      return res.status(response.status).json({ error: data.error ? data.error.message : 'API error', detail: data });
     }
     var text = '抱歉，我現在沒辦法回應，請再試一次。';
     if (data.content && data.content[0] && data.content[0].text) {
@@ -66,6 +67,7 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json({ text: text });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error('Error:', error);
+    return res.status(500).json({ error: error.message, stack: error.stack });
   }
 };
