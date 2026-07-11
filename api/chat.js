@@ -14,8 +14,8 @@ module.exports = async function handler(req, res) {
   var sessionId = body.session_id;
   var turnCount = body.turn_count || 0;
   var apiKey = process.env.ANTHROPIC_API_KEY;
-  var supabaseUrl = process.env.SUPABASE_URL;
-  var supabaseKey = process.env.SUPABASE_KEY;
+  var supabaseUrl = 'https://csijnoonsdyppxpmbtpx.supabase.co';
+  var supabaseKey = 'sb_publishable_85WrMl95Q9po_rapfgt38A_UXcY5Ueb';
 
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured' });
@@ -45,8 +45,8 @@ module.exports = async function handler(req, res) {
       text = data.content[0].text;
     }
 
-    // 儲存到Supabase（非同步，不影響回應速度）
-    if (supabaseUrl && supabaseKey && sessionId && turnCount > 0) {
+    // 儲存到Supabase
+    if (sessionId && turnCount > 0) {
       fetch(supabaseUrl + '/rest/v1/conversations', {
         method: 'POST',
         headers: {
