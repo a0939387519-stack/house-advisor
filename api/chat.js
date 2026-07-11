@@ -2,19 +2,20 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
   var body = req.body;
   var messages = body.messages;
   var system = body.system;
+  var sessionId = body.session_id;
+  var turnCount = body.turn_count || 0;
   var apiKey = process.env.ANTHROPIC_API_KEY;
+  var supabaseUrl = process.env.SUPABASE_URL;
+  var supabaseKey = process.env.SUPABASE_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured' });
@@ -35,20 +36,35 @@ module.exports = async function handler(req, res) {
         messages: messages
       })
     });
-
     var data = await response.json();
-
     if (!response.ok) {
       return res.status(response.status).json({ error: data.error ? data.error.message : 'API error' });
     }
-
     var text = '抱歉，我現在沒辦法回應，請再試一次。';
     if (data.content && data.content[0] && data.content[0].text) {
       text = data.content[0].text;
     }
 
-    return res.status(200).json({ text: text });
+    // 儲存到Supabase（非同步，不影響回應速度）
+    if (supabaseUrl && supabaseKey && sessionId && turnCount > 0) {
+      fetch(supabaseUrl + '/rest/v1/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': 'Bearer ' + supabaseKey,
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          turn_count: turnCount,
+          api_calls: body.api_calls || 1,
+          messages: messages.slice(-4)
+        })
+      }).catch(function(e) { console.log('Supabase save failed:', e); });
+    }
 
+    return res.status(200).json({ text: text });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
