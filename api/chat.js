@@ -16,15 +16,16 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'API key not configured' });
   }
   try {
-    // 明確建立乾淨的Headers物件
-    var headers = new Headers();
-    headers.set('Content-Type', 'application/json');
-    headers.set('x-api-key', apiKey);
-    headers.set('anthropic-version', '2023-06-01');
-
+    // 用node-fetch風格明確傳headers物件避免Vercel注入
     var response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: headers,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'SUPABASE_URL': undefined,
+        'SUPABASE_KEY': undefined
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 2000,
