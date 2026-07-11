@@ -201,7 +201,7 @@ button#btn:disabled { background: #ccc; cursor: not-allowed; }
 </div>
 
 <script>
-var API = 'https://house-advisor-ocfo.vercel.app/api/chat';
+var API = 'https://house-advisor-nine.vercel.app/api/chat';
 var SYS = `你是一位有超過十年現場驗屋經驗的顧問，說話像有經驗的朋友。口語簡短，絕對不用條列式，絕對不用粗體。
 
 【嚴格規則——輸出格式】
@@ -818,7 +818,7 @@ async function doSend(text) {
                   // 排除依據不足，強制繼續問
                   var forceMsg = hist.concat([
                     {role:'assistant', content:responseText},
-                    {role:'user', content:'[指示：排除依據不足，不能給結論。請繼續問一個能幫助排除的關鍵問題：' + (conGate.reason||'') + ']'}
+                    {role:'user', content:'[系統指示：請直接問下一個能幫助排除可能性的關鍵問題，不要說「等等」「我剛才說太快了」這類話，直接問就好。還需要確認：' + (conGate.reason||'') + ']'}
                   ]);
                   var forceR = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:SYS, messages:forceMsg})});
                   var forceData = await forceR.json();
