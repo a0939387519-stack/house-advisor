@@ -743,6 +743,9 @@ async function doSend(text) {
     renderPreviews();
     try { document.getElementById('fileInput').value = ''; } catch(e) {}
 
+    var lastMsg = messagesWithFiles[messagesWithFiles.length-1];
+    console.log('Last msg type:', typeof lastMsg.content, Array.isArray(lastMsg.content) ? 'array len:' + lastMsg.content.length : String(lastMsg.content).slice(0,50));
+
     var r = await fetch(API, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
