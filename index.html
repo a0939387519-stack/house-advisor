@@ -699,12 +699,13 @@ async function doSend(text) {
         if (cleanResult !== '引導描述' && cleanResult !== '資訊足夠') {
           // 有補問句，同理屋主感受後直接顯示補問句，不讓Sonnet跑
           showThink(false);
-          // 先讓Sonnet說同理，再加補問句
+          // 先讓Sonnet說同理，再加補問句——用臨時變數，不污染hist
           var lastUserMsg = hist[hist.length - 1];
-          lastUserMsg.content = lastUserMsg.content + "\n\n[指示：屋主說的資訊已包含現象和觸發條件。請先用一句話同理屋主的感受，然後直接說以下補問句，不要說引導描述：" + cleanResult + "]";
+          var injectedContent = (typeof lastUserMsg.content === 'string' ? lastUserMsg.content : text) + "\n\n[指示：屋主說的資訊已包含現象和觸發條件。請先用一句話同理屋主的感受，然後直接說以下補問句，不要說引導描述：" + cleanResult + "]";
+          lastUserMsg._injected = injectedContent; // 暫存注入版本，不覆蓋content
         } else if (cleanResult === '資訊足夠') {
           var lastUserMsg = hist[hist.length - 1];
-          lastUserMsg.content = lastUserMsg.content + "\n\n[指示：屋主說的資訊已足夠，請直接同理屋主的感受，然後整理確認目前知道的狀況，不要說引導描述]";
+          lastUserMsg._injected = (typeof lastUserMsg.content === 'string' ? lastUserMsg.content : text) + "\n\n[指示：屋主說的資訊已足夠，請直接同理屋主的感受，然後整理確認目前知道的狀況，不要說引導描述]";
         }
         // 引導描述：繼續正常流程，Sonnet會說引導描述
       } catch(checkErr) {
@@ -726,15 +727,16 @@ async function doSend(text) {
             contentArr.push({type: 'document', source: {type: 'base64', media_type: 'application/pdf', data: f.data}});
           }
         });
-        var textContent = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('') : String(m.content));
+        var textContent = m._injected || (typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('') : String(m.content)));
         contentArr.push({type: 'text', text: textContent});
         return {role: 'user', content: contentArr};
       }
-      // 確保content是字串格式（避免陣列格式傳給API）
-      if (typeof m.content !== 'string' && !Array.isArray(m.content)) {
-        return {role: m.role, content: String(m.content)};
+      // 用_injected版本（如果有），不然用原本的content
+      var useContent = m._injected || m.content;
+      if (typeof useContent !== 'string' && !Array.isArray(useContent)) {
+        useContent = String(useContent);
       }
-      return m;
+      return {role: m.role, content: useContent};
     });
     pendingFiles = [];
     renderPreviews();
