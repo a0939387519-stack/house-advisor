@@ -714,19 +714,25 @@ async function doSend(text) {
     }
 
     // Build messages with files if any
+    var filesSnapshot = pendingFiles.slice(); // 先快照，避免之後清空影響
     var messagesWithFiles = hist.map(function(m, idx) {
       // Add pending files to the last user message
-      if (m.role === 'user' && idx === hist.length - 1 && pendingFiles.length > 0) {
+      if (m.role === 'user' && idx === hist.length - 1 && filesSnapshot.length > 0) {
         var contentArr = [];
-        pendingFiles.forEach(function(f) {
+        filesSnapshot.forEach(function(f) {
           if (f.type === 'image') {
             contentArr.push({type: 'image', source: {type: 'base64', media_type: f.mediaType, data: f.data}});
           } else {
             contentArr.push({type: 'document', source: {type: 'base64', media_type: 'application/pdf', data: f.data}});
           }
         });
-        contentArr.push({type: 'text', text: m.content});
+        var textContent = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('') : String(m.content));
+        contentArr.push({type: 'text', text: textContent});
         return {role: 'user', content: contentArr};
+      }
+      // 確保content是字串格式（避免陣列格式傳給API）
+      if (typeof m.content !== 'string' && !Array.isArray(m.content)) {
+        return {role: m.role, content: String(m.content)};
       }
       return m;
     });
