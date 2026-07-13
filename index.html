@@ -804,8 +804,8 @@ async function doSend(text) {
             var idx = text.indexOf('[指示：');
             if (idx > -1) text = text.slice(0, idx).trim();
             return {role: m.role, content: text || '(略)'};
-          }).concat([{role:'user', content:'工具準備說：「' + responseText.slice(0,200) + '」目前是否已有足夠排除依據支持這個結論？回答JSON：{"sufficient":true或false,"reason":"原因"}'}]);
-          var conR = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是結論評估器。判斷工具的結論是否有足夠的排除依據。只輸出JSON，不要其他文字。\n\n重要原則：\n1. 洗衣機排水（污水管）讓陽台地排（廢水管）冒水，不是管徑問題，而是污廢水在某個節點接通的警訊，需要同時考慮污廢水共管＋管路部分堵塞兩個問題，不能只說其中一個。\n2. 廢水管出現下水道臭味，代表污水管氣體跑進廢水管，這是污廢水共管的警訊，不能被忽略。\n3. 結論如果只說一個原因但現象指向多個問題，判斷為insufficient。', messages:conGateMessages})});
+          }).concat([{role:'user', content:'工具準備說：「' + responseText.slice(0,200) + '」目前是否已有足夠排除依據支持這個結論？回答JSON：{"sufficient":true或false,"next_question":"如果false，下一個最關鍵的問題是什麼（給工具直接問屋主用的）","reason":"原因"}'}]);
+          var conR = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是結論評估器。判斷工具的結論是否有足夠的排除依據。只輸出JSON，不要其他文字。\n\n放行原則：\n1. 如果剩下的可能性都只有現場才能確認，就放行（sufficient:true），不要繼續攔截。工具的任務是給屋主下一步方向，不是等到100%確認才給Z。\n2. 如果還有屋主能自己回答的關鍵問題沒問到，才攔截（sufficient:false），並在next_question給出具體的下一個問句。\n3. 觸發條件已確認、位置已確認、現象已確認，就可以放行。\n\n重要知識：\n1. 洗衣機排水（污水管）讓陽台地排（廢水管）冒水，需要同時考慮污廢水共管＋管路部分堵塞兩個問題。\n2. 廢水管出現下水道臭味，是污廢水共管的警訊，不能被忽略。\n3. 結論如果只說一個原因但現象指向多個問題，判斷為insufficient。', messages:conGateMessages})});
           var conData = await conR.json();
           if (conData.text) {
             try {
@@ -818,7 +818,7 @@ async function doSend(text) {
                   // 排除依據不足，強制繼續問
                   var forceMsg = hist.concat([
                     {role:'assistant', content:responseText},
-                    {role:'user', content:'[系統指示：請直接問下一個能幫助排除可能性的關鍵問題，不要說「等等」「我剛才說太快了」這類話，直接問就好。還需要確認：' + (conGate.reason||'') + ']'}
+                    {role:'user', content:'[系統指示：請直接問這個問題：' + (conGate.next_question || conGate.reason || '請繼續問能幫助排除的關鍵問題') + '。不要說「等等」或解釋，直接問就好。]'}
                   ]);
                   var forceR = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:SYS, messages:forceMsg})});
                   var forceData = await forceR.json();
