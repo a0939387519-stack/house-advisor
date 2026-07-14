@@ -731,9 +731,14 @@ async function doSend(text) {
 
     // Build messages with files if any
     var filesSnapshot = pendingFiles.slice(); // 先快照，避免之後清空影響
+    // 找最後一筆user message的index
+    var lastUserIdx = -1;
+    for (var i = hist.length - 1; i >= 0; i--) {
+      if (hist[i].role === 'user') { lastUserIdx = i; break; }
+    }
     var messagesWithFiles = hist.map(function(m, idx) {
       // Add pending files to the last user message
-      if (m.role === 'user' && idx === hist.length - 1 && filesSnapshot.length > 0) {
+      if (m.role === 'user' && idx === lastUserIdx && filesSnapshot.length > 0) {
         var contentArr = [];
         filesSnapshot.forEach(function(f) {
           if (f.type === 'image') {
