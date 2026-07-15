@@ -776,6 +776,7 @@ async function doSend(text) {
     var messagesWithFiles = hist.map(function(m, idx) {
       // Add pending files to the last user message
       if (m.role === 'user' && idx === lastUserIdx && filesSnapshot.length > 0) {
+        console.log('Attaching photo to message idx:', idx);
         var contentArr = [];
         filesSnapshot.forEach(function(f) {
           if (f.type === 'image') {
