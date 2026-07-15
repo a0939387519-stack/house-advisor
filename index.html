@@ -765,18 +765,14 @@ async function doSend(text) {
 
     // Build messages with files if any
     var filesSnapshot = pendingFiles.slice(); // 先快照，避免之後清空影響
-    window._debugFilesSnapshot = filesSnapshot; // 全域追蹤用
-    console.log('filesSnapshot at build time:', filesSnapshot.length);
     // 找最後一筆user message的index
     var lastUserIdx = -1;
     for (var i = hist.length - 1; i >= 0; i--) {
       if (hist[i].role === 'user') { lastUserIdx = i; break; }
     }
-    console.log('lastUserIdx:', lastUserIdx, 'hist.length:', hist.length, 'filesSnapshot.length:', filesSnapshot.length);
     var messagesWithFiles = hist.map(function(m, idx) {
       // Add pending files to the last user message
       if (m.role === 'user' && idx === lastUserIdx && filesSnapshot.length > 0) {
-        console.log('Attaching photo to message idx:', idx);
         var contentArr = [];
         filesSnapshot.forEach(function(f) {
           if (f.type === 'image') {
@@ -788,7 +784,6 @@ async function doSend(text) {
         var textContent = m._injected || (typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('') : String(m.content)));
         var photoReminder = '【注意：這則訊息包含照片，請先仔細看照片，描述照片裡看到的視覺細節，再結合文字說明一起判斷。】\n\n';
         contentArr.push({type: 'text', text: photoReminder + textContent});
-        console.log('content types:', contentArr.map(function(c){return c.type}));
         return {role: 'user', content: contentArr};
       }
       // 用_injected版本（如果有），不然用原本的content
