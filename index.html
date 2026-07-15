@@ -931,7 +931,7 @@ window.addEventListener('load', function() {
   
   fileInput.addEventListener('change', function() {
     if (this.files && this.files.length > 0) {
-      handleFiles({target: {files: this.files}});
+      // handleFiles already bound via onchange in HTML, skip duplicate
     }
   });
 });
