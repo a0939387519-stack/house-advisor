@@ -787,6 +787,7 @@ async function doSend(text) {
         });
         var textContent = m._injected || (typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join('') : String(m.content)));
         contentArr.push({type: 'text', text: textContent});
+        console.log('content types:', contentArr.map(function(c){return c.type}));
         return {role: 'user', content: contentArr};
       }
       // 用_injected版本（如果有），不然用原本的content
