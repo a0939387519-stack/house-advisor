@@ -196,7 +196,7 @@ button#btn:disabled { background: #ccc; cursor: not-allowed; }
     <textarea id="txt" rows="1" placeholder="說說你遇到的狀況…"></textarea>
     <button id="btn">↑</button>
   </div>
-  <input type="file" id="fileInput" accept="image/*,.pdf" multiple style="display:none" onchange="handleFiles(event)">
+  <input type="file" id="fileInput" accept="image/*,.pdf" multiple style="display:none">
   <div class="restart"><button onclick="restart()">重新開始</button></div>
 </div>
 
@@ -931,7 +931,7 @@ window.addEventListener('load', function() {
   
   fileInput.addEventListener('change', function() {
     if (this.files && this.files.length > 0) {
-      // handleFiles already bound via onchange in HTML, skip duplicate
+      handleFiles({target: {files: this.files}});
     }
   });
 });
