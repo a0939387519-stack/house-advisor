@@ -772,6 +772,7 @@ async function doSend(text) {
     for (var i = hist.length - 1; i >= 0; i--) {
       if (hist[i].role === 'user') { lastUserIdx = i; break; }
     }
+    console.log('lastUserIdx:', lastUserIdx, 'hist.length:', hist.length, 'filesSnapshot.length:', filesSnapshot.length);
     var messagesWithFiles = hist.map(function(m, idx) {
       // Add pending files to the last user message
       if (m.role === 'user' && idx === lastUserIdx && filesSnapshot.length > 0) {
