@@ -75,7 +75,14 @@ module.exports = async function handler(req, res) {
           cache_read_tokens: data.usage.cache_read_input_tokens || 0,
           cache_write_tokens: data.usage.cache_creation_input_tokens || 0
         })
-      }).catch(function(e) { console.log('Supabase save failed:', e); });
+      }).then(function(r) { 
+        console.log('Supabase status:', r.status);
+        return r.text();
+      }).then(function(t) {
+        console.log('Supabase response:', t.slice(0,200));
+      }).catch(function(e) { 
+        console.log('Supabase save failed:', e.message); 
+      });
     }
 
     return res.status(200).json({ 
