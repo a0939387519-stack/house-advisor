@@ -11,25 +11,34 @@ module.exports = async function handler(req, res) {
   var body = req.body;
   var messages = body.messages;
   var system = body.system;
+  var sessionId = body.session_id;
+  var turnCount = body.turn_count || 0;
   var apiKey = process.env.ANTHROPIC_API_KEY;
+  var supabaseUrl = 'https://csijnoonsdyppxpmbtpx.supabase.co';
+  var supabaseKey = 'sb_publishable_85WrMl95Q9po_rapfgt38A_UXcY5Ueb';
+
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured' });
   }
   try {
-    // 用node-fetch風格明確傳headers物件避免Vercel注入
     var response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
-        'SUPABASE_URL': undefined,
-        'SUPABASE_KEY': undefined
+        'anthropic-beta': 'prompt-caching-2024-07-31'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 2000,
-        system: system,
+        system: [
+          {
+            type: 'text',
+            text: system,
+            cache_control: {type: 'ephemeral'}
+          }
+        ],
         messages: messages
       })
     });
@@ -41,7 +50,31 @@ module.exports = async function handler(req, res) {
     if (data.content && data.content[0] && data.content[0].text) {
       text = data.content[0].text;
     }
-    return res.status(200).json({ text: text });
+
+    // 記錄usage到Supabase
+    if (sessionId && data.usage) {
+      fetch(supabaseUrl + '/rest/v1/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': 'Bearer ' + supabaseKey
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          turn_count: turnCount,
+          input_tokens: data.usage.input_tokens || 0,
+          output_tokens: data.usage.output_tokens || 0,
+          cache_read_tokens: data.usage.cache_read_input_tokens || 0,
+          cache_write_tokens: data.usage.cache_creation_input_tokens || 0
+        })
+      }).catch(function(e) { console.log('Supabase save failed:', e); });
+    }
+
+    return res.status(200).json({ 
+      text: text,
+      usage: data.usage
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
