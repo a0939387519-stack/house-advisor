@@ -16,12 +16,11 @@ module.exports = async function handler(req, res) {
   var apiKey = process.env.ANTHROPIC_API_KEY;
   var supabaseUrl = 'https://csijnoonsdyppxpmbtpx.supabase.co';
   var supabaseKey = 'sb_publishable_85WrMl95Q9po_rapfgt38A_UXcY5Ueb';
-
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured' });
   }
   try {
-    var response = await fetch('https://api.anthropic.com/v1/messages', {
+    var rawText = await (await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -41,48 +40,47 @@ module.exports = async function handler(req, res) {
         ],
         messages: messages
       })
-    });
-    var rawText = await response.text();
+    })).text();
     var data;
     try {
       data = JSON.parse(rawText);
     } catch(e) {
       return res.status(500).json({ error: 'API returned non-JSON: ' + rawText.slice(0, 200) });
     }
-    if (!response.ok) {
-      return res.status(response.status).json({ error: data.error ? data.error.message : 'API error' });
+    if (!data || data.error) {
+      return res.status(500).json({ error: data && data.error ? data.error.message : 'API error' });
     }
     var text = '抱歉，我現在沒辦法回應，請再試一次。';
     if (data.content && data.content[0] && data.content[0].text) {
       text = data.content[0].text;
     }
 
-// 記錄usage到Supabase
+    // 記錄usage到Supabase
     console.log('sessionId:', sessionId, 'usage:', data.usage ? JSON.stringify(data.usage) : 'none');
     if (sessionId && data.usage) {
-      fetch(supabaseUrl + '/rest/v1/conversations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          'Authorization': 'Bearer ' + supabaseKey
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-          turn_count: turnCount,
-          input_tokens: data.usage.input_tokens || 0,
-          output_tokens: data.usage.output_tokens || 0,
-          cache_read_tokens: data.usage.cache_read_input_tokens || 0,
-          cache_write_tokens: data.usage.cache_creation_input_tokens || 0
-        })
-      }).then(function(r) { 
-        console.log('Supabase status:', r.status);
-        return r.text();
-      }).then(function(t) {
-        console.log('Supabase response:', t.slice(0,200));
-      }).catch(function(e) { 
-        console.log('Supabase save failed:', e.message); 
-      });
+      try {
+        var sbR = await fetch(supabaseUrl + '/rest/v1/conversations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': 'Bearer ' + supabaseKey
+          },
+          body: JSON.stringify({
+            session_id: sessionId,
+            turn_count: turnCount,
+            input_tokens: data.usage.input_tokens || 0,
+            output_tokens: data.usage.output_tokens || 0,
+            cache_read_tokens: data.usage.cache_read_input_tokens || 0,
+            cache_write_tokens: data.usage.cache_creation_input_tokens || 0
+          })
+        });
+        console.log('Supabase status:', sbR.status);
+        var sbText = await sbR.text();
+        console.log('Supabase response:', sbText.slice(0,200));
+      } catch(e) {
+        console.log('Supabase save failed:', e.message);
+      }
     }
 
     return res.status(200).json({ 
