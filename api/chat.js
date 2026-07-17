@@ -51,7 +51,8 @@ module.exports = async function handler(req, res) {
       text = data.content[0].text;
     }
 
-    // 記錄usage到Supabase
+// 記錄usage到Supabase
+    console.log('sessionId:', sessionId, 'usage:', data.usage ? JSON.stringify(data.usage) : 'none');
     if (sessionId && data.usage) {
       fetch(supabaseUrl + '/rest/v1/conversations', {
         method: 'POST',
