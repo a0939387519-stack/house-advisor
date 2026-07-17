@@ -42,7 +42,13 @@ module.exports = async function handler(req, res) {
         messages: messages
       })
     });
-    var data = await response.json();
+    var rawText = await response.text();
+    var data;
+    try {
+      data = JSON.parse(rawText);
+    } catch(e) {
+      return res.status(500).json({ error: 'API returned non-JSON: ' + rawText.slice(0, 200) });
+    }
     if (!response.ok) {
       return res.status(response.status).json({ error: data.error ? data.error.message : 'API error' });
     }
