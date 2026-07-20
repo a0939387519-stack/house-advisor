@@ -896,19 +896,27 @@ async function doSend(text) {
                     {role:'assistant', content:responseText},
                     {role:'user', content:'[系統指示：請直接問這個問題：' + (conGate2.next_question || conGate2.reason || '請繼續問能幫助排除的關鍵問題') + '。不要說「等等」或解釋，直接問就好。]'}
                   ]);
-                  var forceR2 = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:SYS, messages:forceMsg2})});
-                  var forceData2 = await forceR2.json();
-                  if (forceData2.text) {
-                    try {
-                      var forceClean2 = forceData2.text.replace(/```json|```/g,'').trim();
-                      var forceMatch2 = forceClean2.match(/\{[\s\S]*\}/);
-                      if (forceMatch2) {
-                        var forceParsed2 = JSON.parse(forceMatch2[0]);
-                        if (forceParsed2.response) responseText = forceParsed2.response;
-                      } else {
-                        responseText = forceData2.text;
-                      }
-                    } catch(e) { responseText = forceData2.text; }
+                  var forceController = new AbortController();
+                  var forceTimeout = setTimeout(function() { forceController.abort(); }, 5000);
+                  try {
+                    var forceR2 = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:SYS, messages:forceMsg2}), signal: forceController.signal});
+                    clearTimeout(forceTimeout);
+                    var forceData2 = await forceR2.json();
+                    if (forceData2.text) {
+                      try {
+                        var forceClean2 = forceData2.text.replace(/```json|```/g,'').trim();
+                        var forceMatch2 = forceClean2.match(/\{[\s\S]*\}/);
+                        if (forceMatch2) {
+                          var forceParsed2 = JSON.parse(forceMatch2[0]);
+                          if (forceParsed2.response) responseText = forceParsed2.response;
+                        } else {
+                          responseText = forceData2.text;
+                        }
+                      } catch(e) { responseText = forceData2.text; }
+                    }
+                  } catch(forceErr) {
+                    clearTimeout(forceTimeout);
+                    console.log('forceR failed or timeout:', forceErr.message);
                   }
                 }
               }
