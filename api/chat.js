@@ -13,6 +13,7 @@ module.exports = async function handler(req, res) {
   var system = body.system;
   var sessionId = body.session_id;
   var turnCount = body.turn_count || 0;
+  var isStream = !body.no_stream;
   var apiKey = process.env.ANTHROPIC_API_KEY;
   var supabaseUrl = 'https://csijnoonsdyppxpmbtpx.supabase.co';
   var supabaseKey = 'sb_publishable_85WrMl95Q9po_rapfgt38A_UXcY5Ueb';
@@ -33,7 +34,7 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 2000,
-        stream: true,
+        stream: isStream,
         system: [
           {
             type: 'text',
@@ -46,11 +47,24 @@ module.exports = async function handler(req, res) {
     });
 
     if (!response.ok) {
-      var errData = await response.json();
+      var errText = await response.text();
+      var errData;
+      try { errData = JSON.parse(errText); } catch(e) { errData = {}; }
       return res.status(response.status).json({ error: errData.error ? errData.error.message : 'API error' });
     }
 
-    // 串流回傳
+    // 非串流模式（Gate call用）
+    if (!isStream) {
+      var rawText = await response.text();
+      var data;
+      try { data = JSON.parse(rawText); } catch(e) {
+        return res.status(500).json({ error: 'parse error: ' + rawText.slice(0,100) });
+      }
+      var text = data.content && data.content[0] && data.content[0].text ? data.content[0].text : '抱歉，請再試一次。';
+      return res.status(200).json({ text: text, usage: data.usage });
+    }
+
+    // 串流模式（主call用）
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -63,28 +77,21 @@ module.exports = async function handler(req, res) {
     while (true) {
       var result = await reader.read();
       if (result.done) break;
-      
       var chunk = decoder.decode(result.value, {stream: true});
       var lines = chunk.split('\n');
-      
       for (var i = 0; i < lines.length; i++) {
         var line = lines[i].trim();
         if (!line.startsWith('data: ')) continue;
-        var data = line.slice(6);
-        if (data === '[DONE]') continue;
-        
+        var evtData = line.slice(6);
+        if (evtData === '[DONE]') continue;
         try {
-          var parsed = JSON.parse(data);
+          var parsed = JSON.parse(evtData);
           if (parsed.type === 'content_block_delta' && parsed.delta && parsed.delta.text) {
             fullText += parsed.delta.text;
             res.write('data: ' + JSON.stringify({text: parsed.delta.text}) + '\n\n');
           }
-          if (parsed.type === 'message_delta' && parsed.usage) {
-            usage = parsed.usage;
-          }
-          if (parsed.type === 'message_start' && parsed.message && parsed.message.usage) {
-            usage = parsed.message.usage;
-          }
+          if (parsed.type === 'message_delta' && parsed.usage) usage = parsed.usage;
+          if (parsed.type === 'message_start' && parsed.message && parsed.message.usage) usage = parsed.message.usage;
         } catch(e) {}
       }
     }
