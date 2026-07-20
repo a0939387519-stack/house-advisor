@@ -725,6 +725,7 @@ var CHECK_SYS = `你是一個資訊分析員，有兩個任務。
 async function doSend(text) {
   hist.push({role:'user', content:text});
   showThink(true);
+  var turnStartTime = Date.now();
   apiCallCount++;
   try {
     // 屋主說第一句話後，先做分類和資訊檢查，把結果傳給Sonnet決定第一句怎麼說
@@ -800,7 +801,7 @@ async function doSend(text) {
     var r = await fetch(API, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({system: SYS, messages: messagesWithFiles, session_id: SESSION_ID, turn_count: count, api_calls: apiCallCount})
+      body: JSON.stringify({system: SYS, messages: messagesWithFiles, session_id: SESSION_ID, turn_count: count, api_calls: apiCallCount, turn_duration: Date.now() - turnStartTime})
     });
     var data = await r.json();
     showThink(false);
@@ -918,6 +919,8 @@ async function doSend(text) {
       
 
       
+      var turnDuration = Date.now() - turnStartTime;
+      console.log('Turn duration:', turnDuration + 'ms', 'turn:', count+1);
       hist.push({role:'assistant', content:responseText});
       addMsg(responseText, 'ai');
       count++;
