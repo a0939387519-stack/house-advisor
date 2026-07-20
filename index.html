@@ -833,76 +833,90 @@ async function doSend(text) {
         console.log('Not structured output, using raw text');
       }
       
-      // 中間Gate——確認檢查點是否合理
-      if (hasCheckpoint && count > 0) {
+      // Gate並行執行——Checkpoint和Conclusion同時跑，省時間
+      if (count > 0 && (hasCheckpoint || hasConclusion)) {
         try {
-          var cpGateMsg = [{role:'user', content:'對話到目前：工具說「' + responseText.slice(0,300) + '」這個檢查點，屋主自己能去確認，還是只有現場才能確認？回答JSON：{"user_can_check":true或false,"reason":"原因"}'}];
-          var cpR = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是檢查點評估器。只輸出JSON，不要其他文字。', messages:cpGateMsg})});
-          var cpData = await cpR.json();
-          if (cpData.text) {
+          // 準備兩個Gate的Promise
+          var cpPromise = null;
+          var conPromise = null;
+          
+          if (hasCheckpoint) {
+            var cpGateMsg = [{role:'user', content:'對話到目前：工具說「' + responseText.slice(0,300) + '」這個檢查點，屋主自己能去確認，還是只有現場才能確認？回答JSON：{"user_can_check":true或false,"reason":"原因"}'}];
+            cpPromise = fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是檢查點評估器。只輸出JSON，不要其他文字。', messages:cpGateMsg})}).then(function(r){return r.json();});
+          }
+          
+          if (hasConclusion) {
+            var recentHist2 = hist.slice(-6);
+            while (recentHist2.length > 0 && recentHist2[0].role !== 'user') recentHist2 = recentHist2.slice(1);
+            if (recentHist2.length === 0) recentHist2 = [{role:'user', content:'請根據對話判斷'}];
+            var conGateMessages2 = recentHist2.map(function(m) {
+              var text2 = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join(' ') : String(m.content));
+              var idx2 = text2.indexOf('[指示：');
+              if (idx2 > -1) text2 = text2.slice(0, idx2).trim();
+              return {role: m.role, content: text2 || '(略)'};
+            }).concat([{role:'user', content:'工具準備說：「' + responseText.slice(0,200) + '」目前是否已有足夠排除依據支持這個結論？回答JSON：{"sufficient":true或false,"next_question":"如果false，下一個最關鍵的問題是什麼","reason":"原因"}'}]);
+            conPromise = fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是診斷導遊，不是法官。你的最高原則是：每一輪對話都要讓屋主的未知比上一輪少一點。只輸出JSON，不要其他文字。\n\n判斷邏輯：\n工具給的Z有沒有同時包含這三件事？\n1. 方向：目前資訊比較支持哪個方向（不需要100%確定，有合理推論就能說）\n2. 原理：為什麼支持這個方向（要有物理原理支撐，不是猜測）\n3. 精準問句或確認動作：屋主下一步能做什麼來進一步縮小範圍\n\n如果三件事都有→sufficient:true，放行\n如果方向和原理都有，但缺少精準問句→sufficient:true，放行（屋主至少知道方向）\n如果完全沒有方向→sufficient:false，給next_question\n\n注意：\n- 觸發條件不清楚不是攔截的理由，可以把「觀察洗澡前後」當成Z裡的確認動作\n- 不要追求100%確定才放行，有合理方向就放行\n- 目標是讓屋主每輪都有進展，不是讓工具不犯錯\n\n重要知識：\n1. 洗衣機排水（污水管）讓陽台地排（廢水管）冒水，需要同時考慮污廢水共管＋管路部分堵塞兩個問題。\n2. 廢水管出現下水道臭味，是污廢水共管的警訊，不能被忽略。\n3. 結論如果只說一個原因但現象指向多個問題，判斷為insufficient。', messages:conGateMessages2})}).then(function(r){return r.json();});
+          }
+          
+          // 同時等待兩個Gate結果
+          var gateResults = await Promise.all([
+            cpPromise || Promise.resolve(null),
+            conPromise || Promise.resolve(null)
+          ]);
+          
+          var cpData2 = gateResults[0];
+          var conData2 = gateResults[1];
+          
+          // 處理Checkpoint Gate結果
+          if (cpData2 && cpData2.text) {
             try {
-              var cpClean = cpData.text.replace(/```json|```/g,'').trim();
-              var cpMatch = cpClean.match(/\{[\s\S]*\}/);
-              if (cpMatch) {
-                var cpGate = JSON.parse(cpMatch[0]);
-                console.log('Checkpoint Gate:', cpGate.user_can_check, cpGate.reason);
-                if (!cpGate.user_can_check) {
-                  // 檢查點屋主無法自己確認，修改回覆
+              var cpClean2 = cpData2.text.replace(/```json|```/g,'').trim();
+              var cpMatch2 = cpClean2.match(/\{[\s\S]*\}/);
+              if (cpMatch2) {
+                var cpGate2 = JSON.parse(cpMatch2[0]);
+                console.log('Checkpoint Gate:', cpGate2.user_can_check, cpGate2.reason);
+                if (!cpGate2.user_can_check) {
                   responseText = responseText + '\n\n這個部分需要有人到現場才能確認，無法靠描述判斷。';
                 }
               }
             } catch(e) { console.log('CP Gate parse error'); }
           }
-        } catch(e) { console.log('CP Gate failed'); }
-      }
-      
-      // 最後Gate——方向和原因有沒有足夠排除依據
-      if (hasConclusion && count > 0) {
-        try {
-          var recentHist = hist.slice(-6);
-          while (recentHist.length > 0 && recentHist[0].role !== 'user') recentHist = recentHist.slice(1);
-          if (recentHist.length === 0) recentHist = [{role:'user', content:'請根據對話判斷'}];
-          var conGateMessages = recentHist.map(function(m) {
-            var text = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join(' ') : String(m.content));
-            var idx = text.indexOf('[指示：');
-            if (idx > -1) text = text.slice(0, idx).trim();
-            return {role: m.role, content: text || '(略)'};
-          }).concat([{role:'user', content:'工具準備說：「' + responseText.slice(0,200) + '」目前是否已有足夠排除依據支持這個結論？回答JSON：{"sufficient":true或false,"next_question":"如果false，下一個最關鍵的問題是什麼（給工具直接問屋主用的）","reason":"原因"}'}]);
-          var conR = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是診斷導遊，不是法官。你的最高原則是：每一輪對話都要讓屋主的未知比上一輪少一點。只輸出JSON，不要其他文字。\n\n判斷邏輯：\n工具給的Z有沒有同時包含這三件事？\n1. 方向：目前資訊比較支持哪個方向（不需要100%確定，有合理推論就能說）\n2. 原理：為什麼支持這個方向（要有物理原理支撐，不是猜測）\n3. 精準問句或確認動作：屋主下一步能做什麼來進一步縮小範圍\n\n如果三件事都有→sufficient:true，放行\n如果方向和原理都有，但缺少精準問句→sufficient:true，放行（屋主至少知道方向）\n如果完全沒有方向→sufficient:false，給next_question\n\n注意：\n- 觸發條件不清楚不是攔截的理由，可以把「觀察洗澡前後」當成Z裡的確認動作，不是繼續問下去的理由\n- 不要追求100%確定才放行，有合理方向就放行，Z裡說清楚不確定的地方\n- 目標是讓屋主每輪都有進展，不是讓工具不犯錯\n\n重要知識：\n1. 洗衣機排水（污水管）讓陽台地排（廢水管）冒水，需要同時考慮污廢水共管＋管路部分堵塞兩個問題。\n2. 廢水管出現下水道臭味，是污廢水共管的警訊，不能被忽略。\n3. 結論如果只說一個原因但現象指向多個問題，判斷為insufficient。', messages:conGateMessages})});
-          var conData = await conR.json();
-          if (conData.text) {
+          
+          // 處理Conclusion Gate結果
+          if (conData2 && conData2.text) {
             try {
-              var conClean = conData.text.replace(/```json|```/g,'').trim();
-              var conMatch = conClean.match(/\{[\s\S]*\}/);
-              if (conMatch) {
-                var conGate = JSON.parse(conMatch[0]);
-                console.log('Conclusion Gate:', conGate.sufficient, conGate.reason);
-                if (!conGate.sufficient) {
-                  // 排除依據不足，強制繼續問
-                  var forceMsg = hist.concat([
+              var conClean2 = conData2.text.replace(/```json|```/g,'').trim();
+              var conMatch2 = conClean2.match(/\{[\s\S]*\}/);
+              if (conMatch2) {
+                var conGate2 = JSON.parse(conMatch2[0]);
+                console.log('Conclusion Gate:', conGate2.sufficient, conGate2.reason);
+                if (!conGate2.sufficient) {
+                  var forceMsg2 = hist.concat([
                     {role:'assistant', content:responseText},
-                    {role:'user', content:'[系統指示：請直接問這個問題：' + (conGate.next_question || conGate.reason || '請繼續問能幫助排除的關鍵問題') + '。不要說「等等」或解釋，直接問就好。]'}
+                    {role:'user', content:'[系統指示：請直接問這個問題：' + (conGate2.next_question || conGate2.reason || '請繼續問能幫助排除的關鍵問題') + '。不要說「等等」或解釋，直接問就好。]'}
                   ]);
-                  var forceR = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:SYS, messages:forceMsg})});
-                  var forceData = await forceR.json();
-                  if (forceData.text) {
+                  var forceR2 = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:SYS, messages:forceMsg2})});
+                  var forceData2 = await forceR2.json();
+                  if (forceData2.text) {
                     try {
-                      var forceClean = forceData.text.replace(/```json|```/g,'').trim();
-                      var forceMatch = forceClean.match(/\{[\s\S]*\}/);
-                      if (forceMatch) {
-                        var forceParsed = JSON.parse(forceMatch[0]);
-                        if (forceParsed.response) responseText = forceParsed.response;
+                      var forceClean2 = forceData2.text.replace(/```json|```/g,'').trim();
+                      var forceMatch2 = forceClean2.match(/\{[\s\S]*\}/);
+                      if (forceMatch2) {
+                        var forceParsed2 = JSON.parse(forceMatch2[0]);
+                        if (forceParsed2.response) responseText = forceParsed2.response;
                       } else {
-                        responseText = forceData.text;
+                        responseText = forceData2.text;
                       }
-                    } catch(e) { responseText = forceData.text; }
+                    } catch(e) { responseText = forceData2.text; }
                   }
                 }
               }
             } catch(e) { console.log('Conclusion Gate parse error'); }
           }
-        } catch(e) { console.log('Conclusion Gate failed'); }
+        } catch(e) { console.log('Gate failed:', e); }
       }
+      
+
       
       hist.push({role:'assistant', content:responseText});
       addMsg(responseText, 'ai');
