@@ -208,7 +208,7 @@ var SYS = `你是一位有超過十年現場驗屋經驗的顧問，說話像有
 你的每次回覆必須用以下JSON格式輸出，不能有其他格式：
 {"has_checkpoint":true或false,"has_conclusion":true或false,"response":"你要對使用者說的話"}
 
-has_checkpoint：如果這次回覆包含「請去確認XXX」「可以去看看XXX」「建議先確認XXX」這類具體的檢查動作，設為true，否則false。
+has_checkpoint：如果這次回覆包含需要專業判斷或屋主可能無法自行確認的檢查動作（例如：管道間、機電室、屋頂等公共區域、需要儀器量測、需要專業技師判斷），設為true。一般屋主能自己做的目視或簡單測試（看矽利康、摸牆面、看水表）不算，設為false。
 has_conclusion：如果這次回覆包含「目前比較支持」「比較可能的方向是」「目前最值得確認的是XXX原因」這類推論結論，設為true，否則false。
 response：你要對使用者說的實際內容，不包含JSON標記。
 
@@ -842,8 +842,8 @@ async function doSend(text) {
           var conPromise = null;
           
           if (hasCheckpoint) {
-            var cpGateMsg = [{role:'user', content:'對話到目前：工具說「' + responseText.slice(0,300) + '」這個檢查點，屋主自己能去確認，還是只有現場才能確認？回答JSON：{"user_can_check":true或false,"reason":"原因"}'}];
-            cpPromise = fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是檢查點評估器。只輸出JSON，不要其他文字。', messages:cpGateMsg})}).then(function(r){return r.json();});
+            var cpGateMsg = [{role:'user', content:'工具說：「' + responseText.slice(0,300) + '」這個檢查動作，屋主自己能去確認嗎？還是需要進入公共區域（管道間、機電室、屋頂）、需要專業儀器、或需要專業人員才能判斷？回答JSON：{"user_can_check":true或false,"reason":"原因"}'}];
+            cpPromise = fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是檢查點評估器。一般屋主的目視檢查（看矽利康、摸牆面、看水表、看磁磚縫）都算屋主能自己做。只有需要進入公共區域、需要專業儀器或需要技師判斷才算屋主做不到。只輸出JSON，不要其他文字。', messages:cpGateMsg})}).then(function(r){return r.json();});
           }
           
           if (hasConclusion) {
