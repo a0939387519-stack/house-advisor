@@ -738,7 +738,7 @@ async function doSend(text) {
         var checkR = await fetch(API, {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({system: CHECK_SYS, messages: checkMessages})
+          body: JSON.stringify({no_stream: true, system: CHECK_SYS, messages: checkMessages})
         });
         var checkData = await checkR.json();
         var checkResult = checkData.text ? checkData.text.trim() : '';
@@ -889,7 +889,7 @@ async function doSend(text) {
           
           if (hasCheckpoint) {
             var cpGateMsg = [{role:'user', content:'工具說：「' + responseText.slice(0,300) + '」這個檢查動作，屋主自己能去確認嗎？還是需要進入公共區域（管道間、機電室、屋頂）、需要專業儀器、或需要專業人員才能判斷？回答JSON：{"user_can_check":true或false,"reason":"原因"}'}];
-            cpPromise = fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是檢查點評估器。一般屋主的目視檢查（看矽利康、摸牆面、看水表、看磁磚縫）都算屋主能自己做。只有需要進入公共區域、需要專業儀器或需要技師判斷才算屋主做不到。只輸出JSON，不要其他文字。', messages:cpGateMsg})}).then(function(r){return r.json();});
+            cpPromise = fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({no_stream:true,system:'你是檢查點評估器。一般屋主的目視檢查（看矽利康、摸牆面、看水表、看磁磚縫）都算屋主能自己做。只有需要進入公共區域、需要專業儀器或需要技師判斷才算屋主做不到。只輸出JSON，不要其他文字。', messages:cpGateMsg})}).then(function(r){return r.json();});
           }
           
           if (hasConclusion) {
@@ -902,7 +902,7 @@ async function doSend(text) {
               if (idx2 > -1) text2 = text2.slice(0, idx2).trim();
               return {role: m.role, content: text2 || '(略)'};
             }).concat([{role:'user', content:'工具準備說：「' + responseText.slice(0,200) + '」目前是否已有足夠排除依據支持這個結論？回答JSON：{"sufficient":true或false,"next_question":"如果false，下一個最關鍵的問題是什麼","reason":"原因"}'}]);
-            conPromise = fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'你是診斷導遊，不是法官。你的最高原則是：每一輪對話都要讓屋主的未知比上一輪少一點。只輸出JSON，不要其他文字。\n\n判斷邏輯：\n工具給的Z有沒有同時包含這三件事？\n1. 方向：目前資訊比較支持哪個方向（不需要100%確定，有合理推論就能說）\n2. 原理：為什麼支持這個方向（要有物理原理支撐，不是猜測）\n3. 精準問句或確認動作：屋主下一步能做什麼來進一步縮小範圍\n\n如果三件事都有→sufficient:true，放行\n如果方向和原理都有，但缺少精準問句→sufficient:true，放行（屋主至少知道方向）\n如果完全沒有方向→sufficient:false，給next_question\n\n注意：\n- 觸發條件不清楚不是攔截的理由，可以把「觀察洗澡前後」當成Z裡的確認動作\n- 不要追求100%確定才放行，有合理方向就放行\n- 目標是讓屋主每輪都有進展，不是讓工具不犯錯\n\n重要知識：\n1. 洗衣機排水（污水管）讓陽台地排（廢水管）冒水，需要同時考慮污廢水共管＋管路部分堵塞兩個問題。\n2. 廢水管出現下水道臭味，是污廢水共管的警訊，不能被忽略。\n3. 結論如果只說一個原因但現象指向多個問題，判斷為insufficient。', messages:conGateMessages2})}).then(function(r){return r.json();});
+            conPromise = fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({no_stream:true,system:'你是診斷導遊，不是法官。你的最高原則是：每一輪對話都要讓屋主的未知比上一輪少一點。只輸出JSON，不要其他文字。\n\n判斷邏輯：\n工具給的Z有沒有同時包含這三件事？\n1. 方向：目前資訊比較支持哪個方向（不需要100%確定，有合理推論就能說）\n2. 原理：為什麼支持這個方向（要有物理原理支撐，不是猜測）\n3. 精準問句或確認動作：屋主下一步能做什麼來進一步縮小範圍\n\n如果三件事都有→sufficient:true，放行\n如果方向和原理都有，但缺少精準問句→sufficient:true，放行（屋主至少知道方向）\n如果完全沒有方向→sufficient:false，給next_question\n\n注意：\n- 觸發條件不清楚不是攔截的理由，可以把「觀察洗澡前後」當成Z裡的確認動作\n- 不要追求100%確定才放行，有合理方向就放行\n- 目標是讓屋主每輪都有進展，不是讓工具不犯錯\n\n重要知識：\n1. 洗衣機排水（污水管）讓陽台地排（廢水管）冒水，需要同時考慮污廢水共管＋管路部分堵塞兩個問題。\n2. 廢水管出現下水道臭味，是污廢水共管的警訊，不能被忽略。\n3. 結論如果只說一個原因但現象指向多個問題，判斷為insufficient。', messages:conGateMessages2})}).then(function(r){return r.json();});
           }
           
           // 同時等待兩個Gate結果
@@ -945,7 +945,7 @@ async function doSend(text) {
                   var forceController = new AbortController();
                   var forceTimeout = setTimeout(function() { forceController.abort(); }, 5000);
                   try {
-                    var forceR2 = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:SYS, messages:forceMsg2}), signal: forceController.signal});
+                    var forceR2 = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({no_stream:true,system:SYS, messages:forceMsg2}), signal: forceController.signal});
                     clearTimeout(forceTimeout);
                     var forceData2 = await forceR2.json();
                     if (forceData2.text) {
