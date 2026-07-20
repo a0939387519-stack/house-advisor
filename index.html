@@ -812,6 +812,8 @@ async function doSend(text) {
     if (r.headers.get('content-type') && r.headers.get('content-type').includes('text/event-stream')) {
       // 串流模式——先接收完整內容，再解析JSON，再顯示
       showThink(false);
+      // 顯示緩衝提示
+      var bufferMsgEl = addMsg('正在為您整理分析結果...', 'ai');
       var reader = r.body.getReader();
       var decoder = new TextDecoder();
       
@@ -839,6 +841,7 @@ async function doSend(text) {
       var data = await r.json();
       showThink(false);
       rawText = data.text || '';
+      var bufferMsgEl = null; // 非串流模式沒有緩衝提示
     }
     
     if (rawText) {
@@ -863,32 +866,37 @@ async function doSend(text) {
             hasCheckpoint = !!parsed.has_checkpoint;
             hasConclusion = !!parsed.has_conclusion;
             console.log('Structured output:', hasCheckpoint, hasConclusion);
-            // 串流模式：解析完JSON後再逐字顯示
-            if (streamDone && !streamMsgEl) {
-              streamMsgEl = addMsg('', 'ai');
-              var displayText = responseText;
-              var charIdx = 0;
-              var streamInterval = setInterval(function() {
-                if (charIdx >= displayText.length) {
-                  clearInterval(streamInterval);
-                  // 最後一次更新確保完整
+            // 串流模式：解析完JSON後顯示，替換緩衝提示
+            if (streamDone) {
+              if (bufferMsgEl && bufferMsgEl.parentNode) {
+                bufferMsgEl.parentNode.removeChild(bufferMsgEl);
+                bufferMsgEl = null;
+              }
+              if (!streamMsgEl) {
+                streamMsgEl = addMsg('', 'ai');
+                var displayText = responseText;
+                var charIdx = 0;
+                var streamInterval = setInterval(function() {
+                  if (charIdx >= displayText.length) {
+                    clearInterval(streamInterval);
+                    while (streamMsgEl.firstChild) streamMsgEl.removeChild(streamMsgEl.firstChild);
+                    displayText.split('\n').forEach(function(ln, idx) {
+                      if (idx > 0) streamMsgEl.appendChild(document.createElement('br'));
+                      streamMsgEl.appendChild(document.createTextNode(ln));
+                    });
+                    streamMsgEl.scrollIntoView({behavior:'smooth', block:'end'});
+                    return;
+                  }
+                  charIdx += 5;
+                  var showing = displayText.slice(0, charIdx);
                   while (streamMsgEl.firstChild) streamMsgEl.removeChild(streamMsgEl.firstChild);
-                  displayText.split('\n').forEach(function(ln, idx) {
+                  showing.split('\n').forEach(function(ln, idx) {
                     if (idx > 0) streamMsgEl.appendChild(document.createElement('br'));
                     streamMsgEl.appendChild(document.createTextNode(ln));
                   });
                   streamMsgEl.scrollIntoView({behavior:'smooth', block:'end'});
-                  return;
-                }
-                charIdx += 3; // 每次顯示3個字符，速度可調
-                var showing = displayText.slice(0, charIdx);
-                while (streamMsgEl.firstChild) streamMsgEl.removeChild(streamMsgEl.firstChild);
-                showing.split('\n').forEach(function(ln, idx) {
-                  if (idx > 0) streamMsgEl.appendChild(document.createElement('br'));
-                  streamMsgEl.appendChild(document.createTextNode(ln));
-                });
-                streamMsgEl.scrollIntoView({behavior:'smooth', block:'end'});
-              }, 20); // 每20ms更新一次
+                }, 15);
+              }
             }
           }
         }
