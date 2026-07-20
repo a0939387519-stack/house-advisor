@@ -1000,7 +1000,14 @@ async function doSend(text) {
       var turnDuration = Date.now() - turnStartTime;
       console.log('Turn duration:', turnDuration + 'ms', 'turn:', count+1);
       hist.push({role:'assistant', content:responseText});
-      if (!streamMsgEl) addMsg(responseText, 'ai');
+      if (!streamMsgEl) {
+        // 清掉緩衝提示（如果有）
+        if (bufferMsgEl && bufferMsgEl.parentNode) {
+          bufferMsgEl.parentNode.removeChild(bufferMsgEl);
+          bufferMsgEl = null;
+        }
+        addMsg(responseText, 'ai');
+      }
       count++;
       saveToStorage();
       if (count >= 9 && !consultShown) showConsult();
