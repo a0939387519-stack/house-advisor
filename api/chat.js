@@ -67,13 +67,14 @@ module.exports = async function handler(req, res) {
             'Authorization': 'Bearer ' + supabaseKey
           },
           body: JSON.stringify({
-            session_id: sessionId,
-            turn_count: turnCount,
-            input_tokens: data.usage.input_tokens || 0,
-            output_tokens: data.usage.output_tokens || 0,
-            cache_read_tokens: data.usage.cache_read_input_tokens || 0,
-            cache_write_tokens: data.usage.cache_creation_input_tokens || 0
-          })
+  session_id: sessionId,
+  turn_count: turnCount,
+  input_tokens: data.usage.input_tokens || 0,
+  output_tokens: data.usage.output_tokens || 0,
+  cache_read_tokens: data.usage.cache_read_input_tokens || 0,
+  cache_write_tokens: data.usage.cache_creation_input_tokens || 0,
+  turn_duration: body.turn_duration || 0
+})
         });
         console.log('Supabase status:', sbR.status);
         var sbText = await sbR.text();
