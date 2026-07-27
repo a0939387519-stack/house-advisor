@@ -1151,6 +1151,17 @@ document.getElementById('txt').onkeydown = function(e) {
     send();
   }
 };
+
+// Drop-off Rate追蹤——記錄屋主在哪一輪離開
+window.addEventListener('beforeunload', function() {
+  if (count > 0 && SESSION_ID) {
+    var payload = JSON.stringify({
+      session_id: SESSION_ID,
+      dropoff_turn: count
+    });
+    navigator.sendBeacon('/api/dropoff', payload);
+  }
+});
 document.getElementById('txt').oninput = function() {
   this.style.height = 'auto';
   this.style.height = Math.min(this.scrollHeight, 100) + 'px';
