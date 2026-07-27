@@ -1152,17 +1152,6 @@ document.getElementById('txt').onkeydown = function(e) {
   }
 };
 
-// Drop-off Rate追蹤——記錄屋主在哪一輪離開
-window.addEventListener('beforeunload', function() {
-  if (count > 0 && SESSION_ID) {
-    try {
-      var xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/dropoff', false); // 同步，確保送出
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.send(JSON.stringify({session_id: SESSION_ID, dropoff_turn: count}));
-    } catch(e) {}
-  }
-});
 document.getElementById('txt').oninput = function() {
   this.style.height = 'auto';
   this.style.height = Math.min(this.scrollHeight, 100) + 'px';
