@@ -9,9 +9,26 @@ module.exports = async function handler(req, res) {
   var supabaseKey = 'sb_publishable_85WrMl95Q9po_rapfgt38A_UXcY5Ueb';
 
   try {
+    // 嘗試從body或raw body解析
     var body = req.body;
-    var sessionId = body.session_id;
-    var dropoffTurn = body.dropoff_turn;
+    
+    // 如果body是字串，嘗試解析
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch(e) {}
+    }
+    
+    // 如果body還是空的，嘗試讀raw body
+    if (!body || (!body.session_id && !body.dropoff_turn)) {
+      var rawBody = await new Promise(function(resolve) {
+        var chunks = [];
+        req.on('data', function(chunk) { chunks.push(chunk); });
+        req.on('end', function() { resolve(Buffer.concat(chunks).toString()); });
+      });
+      try { body = JSON.parse(rawBody); } catch(e) {}
+    }
+
+    var sessionId = body && body.session_id;
+    var dropoffTurn = body && body.dropoff_turn;
 
     console.log('Dropoff received:', sessionId, dropoffTurn);
 
