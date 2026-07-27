@@ -1153,8 +1153,8 @@ document.getElementById('txt').onkeydown = function(e) {
 };
 
 // Drop-off Rate追蹤——記錄屋主在哪一輪離開
-window.addEventListener('beforeunload', function() {
-  if (count > 0 && SESSION_ID) {
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'hidden' && count > 0 && SESSION_ID) {
     var blob = new Blob([JSON.stringify({session_id: SESSION_ID, dropoff_turn: count})], {type: 'application/json'});
     navigator.sendBeacon('/api/dropoff', blob);
   }
