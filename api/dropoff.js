@@ -13,21 +13,32 @@ module.exports = async function handler(req, res) {
     var sessionId = body.session_id;
     var dropoffTurn = body.dropoff_turn;
 
+    console.log('Dropoff received:', sessionId, dropoffTurn);
+
     if (!sessionId || !dropoffTurn) return res.status(400).end();
 
-    // 找到這個session最後一筆對話，更新dropoff_turn
-    await fetch(supabaseUrl + '/rest/v1/conversations?session_id=eq.' + sessionId + '&turn_count=eq.' + dropoffTurn, {
-      method: 'PATCH',
+    var sbR = await fetch(supabaseUrl + '/rest/v1/conversations', {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': supabaseKey,
         'Authorization': 'Bearer ' + supabaseKey
       },
-      body: JSON.stringify({ dropoff_turn: dropoffTurn })
+      body: JSON.stringify({
+        session_id: sessionId,
+        turn_count: 0,
+        dropoff_turn: dropoffTurn,
+        input_tokens: 0,
+        output_tokens: 0,
+        cache_read_tokens: 0,
+        cache_write_tokens: 0,
+        turn_duration: 0
+      })
     });
-
+    console.log('Supabase dropoff status:', sbR.status);
     return res.status(200).end();
   } catch(e) {
+    console.log('Dropoff error:', e.message);
     return res.status(500).end();
   }
 };
