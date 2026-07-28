@@ -14,6 +14,7 @@ module.exports = async function handler(req, res) {
   var sessionId = body.session_id;
   var turnCount = body.turn_count || 0;
   var isStream = !body.no_stream;
+  var userMessage = body.user_message || '';
   var apiKey = process.env.ANTHROPIC_API_KEY;
   var supabaseUrl = 'https://csijnoonsdyppxpmbtpx.supabase.co';
   var supabaseKey = 'sb_publishable_85WrMl95Q9po_rapfgt38A_UXcY5Ueb';
@@ -113,7 +114,9 @@ module.exports = async function handler(req, res) {
             output_tokens: usage.output_tokens || 0,
             cache_read_tokens: usage.cache_read_input_tokens || 0,
             cache_write_tokens: usage.cache_creation_input_tokens || 0,
-            turn_duration: body.turn_duration || 0
+            turn_duration: body.turn_duration || 0,
+            user_message: userMessage.slice(0, 500),
+            ai_response: fullText.slice(0, 1000)
           })
         });
         console.log('Supabase status:', sbR.status);
