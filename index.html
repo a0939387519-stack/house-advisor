@@ -720,12 +720,14 @@ var QUICK_SYS = `你是專業驗屋顧問。屋主問的是流程、步驟、法
 3. 說清楚「可以做什麼」和「注意什麼」
 4. 如果涉及保固或法規，說清楚屋主的權利和注意事項
 5. 語氣親切，不說教
+6. 用純文字回答，不要用Markdown格式（不要用#標題、**粗體**、表格、---分隔線）
 
 絕對不要：
 - 問屋主更多問題
 - 說「要先確認...再決定」
 - 讓屋主去做了再回來告訴你結果
 - 走洋蔥邏輯或診斷流程
+- 使用Markdown格式
 
 直接回答，給完整實用的答案。`;
 
@@ -862,7 +864,7 @@ async function doSend(text) {
               ratingDiv.appendChild(btn);
             });
             document.getElementById('chat').appendChild(ratingDiv);
-            ratingDiv.scrollIntoView({behavior:'smooth', block:'end'});
+            setTimeout(function() { ratingDiv.scrollIntoView({behavior:'smooth', block:'end'}); }, 100);
           }
           busy = false;
           showThink(false);
