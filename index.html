@@ -712,7 +712,14 @@ function showConsult() {
   d.scrollIntoView({behavior:'smooth', block:'end'});
 }
 
-var CHECK_SYS = `你是一個資訊分析員，有兩個任務。
+var CHECK_SYS = `你是一個資訊分析員，有三個任務。
+
+任務零（最優先）：判斷這是「流程型問題」還是「診斷型問題」。
+流程型問題：屋主問的是怎麼處理、步驟、法規、保固期怎麼申請、缺失怎麼請建商修、驗屋報告怎麼看、交屋流程、合約問題等——這類問題有標準答案，不需要問更多就能回答。
+診斷型問題：屋主描述的是一個現象，需要推論原因——漏水、臭味、裂縫、跳電、排水慢、發霉等。
+
+如果是流程型問題→直接回覆：流程型
+如果是診斷型問題→繼續下面的任務一和任務二。
 
 任務一：判斷屋主的描述是否已包含【現象＋觸發條件】。
 有現象（發生了什麼）加上觸發條件（什麼時候發生、什麼情況下發生），就算足夠。
@@ -795,7 +802,11 @@ async function doSend(text) {
         // 清理checkResult，移除【】括號
         var cleanResult = checkResult.replace(/[【】]/g, '');
         
-        if (cleanResult !== '引導描述' && cleanResult !== '資訊足夠') {
+        if (cleanResult === '流程型') {
+          // 流程型問題——用快速模式SYS直接回答，不走洋蔥邏輯
+          var lastUserMsg = hist[hist.length - 1];
+          lastUserMsg._injected = (typeof lastUserMsg.content === 'string' ? lastUserMsg.content : text) + '\n\n[指示：這是流程型問題，請直接給出完整清楚的答案，不需要問更多問題。]';
+        } else if (cleanResult !== '引導描述' && cleanResult !== '資訊足夠') {
           // 有補問句，同理屋主感受後直接顯示補問句，不讓Sonnet跑
           showThink(false);
           // 先讓Sonnet說同理，再加補問句——用臨時變數，不污染hist
