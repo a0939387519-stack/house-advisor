@@ -712,9 +712,24 @@ function showConsult() {
   d.scrollIntoView({behavior:'smooth', block:'end'});
 }
 
-var CHECK_SYS = `你是一個資訊分析員，有三個任務。
+var QUICK_SYS = `你是專業驗屋顧問。屋主問的是流程、步驟、法規或處理方式的問題，這類問題有標準答案，不需要問更多問題。
 
-任務零（最優先）：判斷這是「流程型問題」還是「診斷型問題」。
+回答原則：
+1. 直接給出完整的答案，不要問「你有沒有...」「可以先確認一下...」
+2. 答案要有步驟感，讓屋主知道下一步怎麼做
+3. 說清楚「可以做什麼」和「注意什麼」
+4. 如果涉及保固或法規，說清楚屋主的權利和注意事項
+5. 語氣親切，不說教
+
+絕對不要：
+- 問屋主更多問題
+- 說「要先確認...再決定」
+- 讓屋主去做了再回來告訴你結果
+- 走洋蔥邏輯或診斷流程
+
+直接回答，給完整實用的答案。`;
+
+var CHECK_SYS = `任務零（最優先）：判斷這是「流程型問題」還是「診斷型問題」。
 流程型問題：屋主問的是怎麼處理、步驟、法規、保固期怎麼申請、缺失怎麼請建商修、驗屋報告怎麼看、交屋流程、合約問題等——這類問題有標準答案，不需要問更多就能回答。
 診斷型問題：屋主描述的是一個現象，需要推論原因——漏水、臭味、裂縫、跳電、排水慢、發霉等。
 
@@ -803,9 +818,30 @@ async function doSend(text) {
         var cleanResult = checkResult.replace(/[【】]/g, '');
         
         if (cleanResult === '流程型') {
-          // 流程型問題——用快速模式SYS直接回答，不走洋蔥邏輯
-          var lastUserMsg = hist[hist.length - 1];
-          lastUserMsg._injected = (typeof lastUserMsg.content === 'string' ? lastUserMsg.content : text) + '\n\n[指示：這是流程型問題，請直接給出完整清楚的答案，不需要問更多問題。]';
+          // 流程型問題——用QUICK_SYS直接回答，不走洋蔥邏輯
+          showThink(false);
+          var quickR = await fetch(API, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              no_stream: true,
+              system: QUICK_SYS,
+              messages: [{role: 'user', content: text}],
+              session_id: SESSION_ID,
+              turn_count: count,
+              user_message: text
+            })
+          });
+          var quickData = await quickR.json();
+          if (quickData.text) {
+            addMsg(quickData.text, 'ai');
+            hist.push({role: 'assistant', content: quickData.text});
+            count++;
+            saveToStorage();
+          }
+          busy = false;
+          showThink(false);
+          return; // 流程型問題處理完，不繼續執行主call
         } else if (cleanResult !== '引導描述' && cleanResult !== '資訊足夠') {
           // 有補問句，同理屋主感受後直接顯示補問句，不讓Sonnet跑
           showThink(false);
