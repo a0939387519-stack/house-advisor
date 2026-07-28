@@ -821,9 +821,7 @@ async function doSend(text) {
         
         if (cleanResult === '流程型') {
           // 流程型問題——用QUICK_SYS直接回答，不走洋蔥邏輯
-          showThink(false);
-          // 顯示等待提示
-          var quickBufferEl = addMsg('正在為您整理分析結果...', 'ai');
+          // 繼續顯示loading，不用另外顯示緩衝提示
           var quickR = await fetch(API, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -836,11 +834,8 @@ async function doSend(text) {
               user_message: text
             })
           });
+          showThink(false);
           var quickData = await quickR.json();
-          // 移除等待提示
-          if (quickBufferEl && quickBufferEl.parentNode) {
-            quickBufferEl.parentNode.removeChild(quickBufferEl);
-          }
           if (quickData.text) {
             // 移除Markdown格式
             var cleanQuickText = quickData.text
