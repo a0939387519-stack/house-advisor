@@ -135,6 +135,7 @@ async function loadData() {
     }
     if (row.helpful) sessions[sid].helpful = row.helpful;
     // 計算費用
+    console.log('row tokens:', row.session_id, row.input_tokens, row.output_tokens, row.cache_read_tokens);
     var inputTokens = (row.input_tokens || 0) - (row.cache_read_tokens || 0);
     var cacheTokens = row.cache_read_tokens || 0;
     var outputTokens = row.output_tokens || 0;
