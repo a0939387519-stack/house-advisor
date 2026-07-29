@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>房子診斷工具 Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, sans-serif; background: #f5f5f5; color: #333; }
+#login { display: flex; align-items: center; justify-content: center; height: 100vh; }
+#login-box { background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); width: 320px; text-align: center; }
+#login-box h2 { margin-bottom: 20px; font-size: 18px; color: #555; }
+#login-box input { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 12px; }
+#login-box button { width: 100%; padding: 10px; background: #333; color: white; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
+#login-box button:hover { background: #555; }
+#main { display: none; max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.header h1 { font-size: 20px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: white; border-radius: 10px; padding: 16px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.stat-card .num { font-size: 28px; font-weight: bold; color: #333; }
+.stat-card .label { font-size: 12px; color: #888; margin-top: 4px; }
+.sessions { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
+.sessions table { width: 100%; border-collapse: collapse; }
+.sessions th { background: #f8f8f8; padding: 12px 16px; text-align: left; font-size: 13px; color: #666; border-bottom: 1px solid #eee; }
+.sessions td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+.sessions tr:hover { background: #fafafa; cursor: pointer; }
+.helpful-yes { color: #22a; background: #e8f5e9; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.helpful-partial { color: #e65; background: #fff3e0; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.helpful-no { color: #c33; background: #fce4e4; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.helpful-none { color: #aaa; font-size: 12px; }
+#detail { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; overflow-y: auto; }
+#detail-box { background: white; max-width: 700px; margin: 40px auto; border-radius: 12px; overflow: hidden; }
+#detail-header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+#detail-header h3 { font-size: 15px; }
+#detail-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #888; }
+#detail-content { padding: 16px 20px; max-height: 70vh; overflow-y: auto; }
+.turn { margin-bottom: 16px; }
+.turn-label { font-size: 11px; color: #aaa; margin-bottom: 4px; }
+.user-msg { background: #f0f0f0; padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5; margin-bottom: 6px; }
+.ai-msg { background: #e8f0fe; padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+.loading { text-align: center; padding: 40px; color: #aaa; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div id="login-box">
+    <h2>🏠 房子診斷工具</h2>
+    <input type="password" id="pwd" placeholder="請輸入密碼" onkeydown="if(event.key==='Enter')checkPwd()">
+    <button onclick="checkPwd()">進入 Dashboard</button>
+    <div id="pwd-err" style="color:#c33;font-size:13px;margin-top:10px;"></div>
+  </div>
+</div>
+
+<div id="main">
+  <div class="header">
+    <h1>🏠 房子診斷工具 Dashboard</h1>
+    <button onclick="loadData()" style="padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:13px;">重新整理</button>
+  </div>
+  <div class="stats">
+    <div class="stat-card"><div class="num" id="s-total">-</div><div class="label">總對話數</div></div>
+    <div class="stat-card"><div class="num" id="s-avg">-</div><div class="label">平均輪數</div></div>
+    <div class="stat-card"><div class="num" id="s-rated">-</div><div class="label">有評分</div></div>
+    <div class="stat-card"><div class="num" id="s-helpful">-</div><div class="label">有幫助率</div></div>
+  </div>
+  <div class="sessions">
+    <table>
+      <thead><tr><th>時間</th><th>Session ID</th><th>輪數</th><th>評分</th></tr></thead>
+      <tbody id="session-list"><tr><td colspan="4" class="loading">載入中...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="detail">
+  <div id="detail-box">
+    <div id="detail-header">
+      <h3 id="detail-title">對話詳情</h3>
+      <button id="detail-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<script>
+var SUPABASE_URL = 'https://csijnoonsdyppxpmbtpx.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_85WrMl95Q9po_rapfgt38A_UXcY5Ueb';
+var PASSWORD = 'xingfu2024';
+
+function checkPwd() {
+  var val = document.getElementById('pwd').value;
+  if (val === PASSWORD) {
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+    loadData();
+  } else {
+    document.getElementById('pwd-err').textContent = '密碼錯誤';
+  }
+}
+
+async function fetchSupabase(path) {
+  var r = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY
+    }
+  });
+  return r.json();
+}
+
+async function loadData() {
+  document.getElementById('session-list').innerHTML = '<tr><td colspan="4" class="loading">載入中...</td></tr>';
+  
+  // 取所有對話紀錄
+  var data = await fetchSupabase('conversations?select=*&order=created_at.desc&limit=500');
+  
+  if (!data || data.error) {
+    document.getElementById('session-list').innerHTML = '<tr><td colspan="4" class="loading">載入失敗</td></tr>';
+    return;
+  }
+
+  // 整理session
+  var sessions = {};
+  data.forEach(function(row) {
+    var sid = row.session_id;
+    if (!sid) return;
+    if (!sessions[sid]) {
+      sessions[sid] = {
+        sid: sid,
+        created_at: row.created_at,
+        max_turn: 0,
+        helpful: null,
+        turns: []
+      };
+    }
+    if (row.helpful) sessions[sid].helpful = row.helpful;
+    if (row.turn_count > sessions[sid].max_turn) sessions[sid].max_turn = row.turn_count;
+    if (row.created_at < sessions[sid].created_at) sessions[sid].created_at = row.created_at;
+    if (row.user_message || row.ai_response) {
+      sessions[sid].turns.push({
+        turn: row.turn_count,
+        user: row.user_message,
+        ai: row.ai_response
+      });
+    }
+  });
+
+  var sessionList = Object.values(sessions).sort(function(a,b) {
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  // 統計
+  var total = sessionList.length;
+  var totalTurns = sessionList.reduce(function(s,x){ return s + x.max_turn; }, 0);
+  var avg = total > 0 ? (totalTurns / total).toFixed(1) : 0;
+  var rated = sessionList.filter(function(x){ return x.helpful; }).length;
+  var helpful = sessionList.filter(function(x){ return x.helpful === 'yes'; }).length;
+  var helpfulRate = rated > 0 ? Math.round(helpful / rated * 100) + '%' : '-';
+
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-avg').textContent = avg;
+  document.getElementById('s-rated').textContent = rated;
+  document.getElementById('s-helpful').textContent = helpfulRate;
+
+  // 列表
+  var html = '';
+  sessionList.forEach(function(s) {
+    var time = s.created_at ? new Date(s.created_at).toLocaleString('zh-TW', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+    var shortId = s.sid ? s.sid.slice(-8) : '-';
+    var helpfulHtml = '';
+    if (s.helpful === 'yes') helpfulHtml = '<span class="helpful-yes">✅ 有幫助</span>';
+    else if (s.helpful === 'partial') helpfulHtml = '<span class="helpful-partial">🔸 部分有幫助</span>';
+    else if (s.helpful === 'no') helpfulHtml = '<span class="helpful-no">❌ 沒有幫助</span>';
+    else helpfulHtml = '<span class="helpful-none">未評分</span>';
+    
+    html += '<tr onclick="showDetail(\'' + s.sid + '\')">';
+    html += '<td>' + time + '</td>';
+    html += '<td style="font-family:monospace;color:#888;">...' + shortId + '</td>';
+    html += '<td>' + s.max_turn + ' 輪</td>';
+    html += '<td>' + helpfulHtml + '</td>';
+    html += '</tr>';
+  });
+  document.getElementById('session-list').innerHTML = html || '<tr><td colspan="4" class="loading">沒有資料</td></tr>';
+  
+  // 存session資料供detail用
+  window._sessions = sessions;
+}
+
+function showDetail(sid) {
+  var s = window._sessions && window._sessions[sid];
+  if (!s) return;
+  
+  document.getElementById('detail-title').textContent = '對話詳情 — ' + sid.slice(-12);
+  
+  var turns = s.turns.sort(function(a,b){ return a.turn - b.turn; });
+  var html = '';
+  if (turns.length === 0) {
+    html = '<div class="loading">這次對話沒有儲存內容</div>';
+  } else {
+    turns.forEach(function(t) {
+      html += '<div class="turn">';
+      html += '<div class="turn-label">第 ' + t.turn + ' 輪</div>';
+      if (t.user) html += '<div class="user-msg">👤 ' + t.user + '</div>';
+      if (t.ai) html += '<div class="ai-msg">🤖 ' + t.ai + '</div>';
+      html += '</div>';
+    });
+  }
+  
+  document.getElementById('detail-content').innerHTML = html;
+  document.getElementById('detail').style.display = 'block';
+}
+
+function closeDetail() {
+  document.getElementById('detail').style.display = 'none';
+}
+</script>
+</body>
+</html>
