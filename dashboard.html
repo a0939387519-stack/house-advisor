@@ -66,7 +66,7 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f5; color: #333;
   </div>
   <div class="sessions">
     <table>
-      <thead><tr><th>時間</th><th>Session ID</th><th>輪數</th><th>評分</th></tr></thead>
+      <thead><tr><th>時間</th><th>Session ID</th><th>輪數</th><th>費用(USD)</th><th>評分</th></tr></thead>
       <tbody id="session-list"><tr><td colspan="4" class="loading">載入中...</td></tr></tbody>
     </table>
   </div>
@@ -109,13 +109,13 @@ async function fetchSupabase(path) {
 }
 
 async function loadData() {
-  document.getElementById('session-list').innerHTML = '<tr><td colspan="4" class="loading">載入中...</td></tr>';
+  document.getElementById('session-list').innerHTML = '<tr><td colspan="5" class="loading">載入中...</td></tr>';
   
   // 取所有對話紀錄
   var data = await fetchSupabase('conversations?select=*&order=created_at.desc&limit=500');
   
   if (!data || data.error) {
-    document.getElementById('session-list').innerHTML = '<tr><td colspan="4" class="loading">載入失敗</td></tr>';
+    document.getElementById('session-list').innerHTML = '<tr><td colspan="5" class="loading">載入失敗</td></tr>';
     return;
   }
 
@@ -134,6 +134,11 @@ async function loadData() {
       };
     }
     if (row.helpful) sessions[sid].helpful = row.helpful;
+    // 計算費用
+    var inputTokens = (row.input_tokens || 0) - (row.cache_read_tokens || 0);
+    var cacheTokens = row.cache_read_tokens || 0;
+    var outputTokens = row.output_tokens || 0;
+    sessions[sid].cost += (inputTokens * 3 / 1000000) + (cacheTokens * 0.3 / 1000000) + (outputTokens * 15 / 1000000);
     if (row.turn_count > sessions[sid].max_turn) sessions[sid].max_turn = row.turn_count;
     if (row.created_at < sessions[sid].created_at) sessions[sid].created_at = row.created_at;
     if (row.user_message || row.ai_response) {
@@ -177,10 +182,12 @@ async function loadData() {
     html += '<td>' + time + '</td>';
     html += '<td style="font-family:monospace;color:#888;">...' + shortId + '</td>';
     html += '<td>' + s.max_turn + ' 輪</td>';
+    var costStr = s.cost > 0 ? '$' + s.cost.toFixed(4) : '-';
+    html += '<td style="font-family:monospace;font-size:12px;">' + costStr + '</td>';
     html += '<td>' + helpfulHtml + '</td>';
     html += '</tr>';
   });
-  document.getElementById('session-list').innerHTML = html || '<tr><td colspan="4" class="loading">沒有資料</td></tr>';
+  document.getElementById('session-list').innerHTML = html || '<tr><td colspan="5" class="loading">沒有資料</td></tr>';
   
   // 存session資料供detail用
   window._sessions = sessions;
