@@ -135,11 +135,12 @@ async function loadData() {
     }
     if (row.helpful) sessions[sid].helpful = row.helpful;
     // 計算費用
-    console.log('row tokens:', row.session_id, row.input_tokens, row.output_tokens, row.cache_read_tokens);
-    var inputTokens = (row.input_tokens || 0) - (row.cache_read_tokens || 0);
-    var cacheTokens = row.cache_read_tokens || 0;
-    var outputTokens = row.output_tokens || 0;
-    sessions[sid].cost += (inputTokens * 3 / 1000000) + (cacheTokens * 0.3 / 1000000) + (outputTokens * 15 / 1000000);
+    var inTok = parseInt(row.input_tokens) || 0;
+    var outTok = parseInt(row.output_tokens) || 0;
+    var cacheTok = parseInt(row.cache_read_tokens) || 0;
+    var normalTok = inTok - cacheTok;
+    if (normalTok < 0) normalTok = 0;
+    sessions[sid].cost = (sessions[sid].cost || 0) + (normalTok * 3 / 1000000) + (cacheTok * 0.3 / 1000000) + (outTok * 15 / 1000000);
     if (row.turn_count > sessions[sid].max_turn) sessions[sid].max_turn = row.turn_count;
     if (row.created_at < sessions[sid].created_at) sessions[sid].created_at = row.created_at;
     if (row.user_message || row.ai_response) {
@@ -183,7 +184,7 @@ async function loadData() {
     html += '<td>' + time + '</td>';
     html += '<td style="font-family:monospace;color:#888;">...' + shortId + '</td>';
     html += '<td>' + s.max_turn + ' 輪</td>';
-    var costStr = s.cost > 0 ? '$' + s.cost.toFixed(4) : '-';
+    var costStr = s.cost >= 0.0001 ? '$' + s.cost.toFixed(4) : (s.max_turn > 0 ? '$0.0001>' : '-');
     html += '<td style="font-family:monospace;font-size:12px;">' + costStr + '</td>';
     html += '<td>' + helpfulHtml + '</td>';
     html += '</tr>';
