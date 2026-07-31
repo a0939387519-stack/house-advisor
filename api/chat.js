@@ -54,7 +54,7 @@ module.exports = async function handler(req, res) {
       return res.status(response.status).json({ error: errData.error ? errData.error.message : 'API error' });
     }
 
-    // 非串流模式（Gate call用）
+    // 非串流模式（Gate call和快速模式用）
     if (!isStream) {
       var rawText = await response.text();
       var data;
@@ -62,6 +62,34 @@ module.exports = async function handler(req, res) {
         return res.status(500).json({ error: 'parse error: ' + rawText.slice(0,100) });
       }
       var text = data.content && data.content[0] && data.content[0].text ? data.content[0].text : '抱歉，請再試一次。';
+      
+      // 快速模式有session_id才存（Gate call沒有user_message，不存）
+      if (sessionId && userMessage && data.usage) {
+        try {
+          await fetch(supabaseUrl + '/rest/v1/conversations', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': supabaseKey,
+              'Authorization': 'Bearer ' + supabaseKey
+            },
+            body: JSON.stringify({
+              session_id: sessionId,
+              turn_count: turnCount,
+              input_tokens: data.usage.input_tokens || 0,
+              output_tokens: data.usage.output_tokens || 0,
+              cache_read_tokens: data.usage.cache_read_input_tokens || 0,
+              cache_write_tokens: data.usage.cache_creation_input_tokens || 0,
+              turn_duration: body.turn_duration || 0,
+              user_message: userMessage.slice(0, 500),
+              ai_response: text.slice(0, 1000)
+            })
+          });
+        } catch(e) {
+          console.log('Supabase quick mode save failed:', e.message);
+        }
+      }
+      
       return res.status(200).json({ text: text, usage: data.usage });
     }
 
