@@ -926,8 +926,12 @@ async function doSend(text) {
             hist.push({role: 'assistant', content: cleanQuickText});
             count++;
             saveToStorage();
-            // 快速模式也顯示評分按鈕
+            // 快速模式也顯示評分按鈕（先清掉之前的）
+            var oldRatings = document.querySelectorAll('.rating-div');
+            oldRatings.forEach(function(el) { el.parentNode.removeChild(el); });
             var ratingDiv = document.createElement('div');
+            ratingDiv.className = 'rating-div';
+            ratingDiv.style.cssText = 'text-align:center;padding:12px 8px;margin:4px 0;';            var ratingDiv = document.createElement('div');
             ratingDiv.style.cssText = 'text-align:center;padding:12px 8px;margin:4px 0;';
             ratingDiv.innerHTML = '<div style="font-size:13px;color:#888;margin-bottom:8px;">這次對話有沒有幫你釐清方向？</div>';
             var ratings = [
@@ -1223,6 +1227,7 @@ async function doSend(text) {
       // Z給完之後顯示評分按鈕
       if (hasConclusion) {
         var ratingDiv = document.createElement('div');
+        ratingDiv.className = 'rating-div';
         ratingDiv.style.cssText = 'text-align:center;padding:12px 8px;margin:4px 0;';
         ratingDiv.innerHTML = '<div style="font-size:13px;color:#888;margin-bottom:8px;">這次對話有沒有幫你釐清方向？</div>';
         
