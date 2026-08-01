@@ -565,6 +565,9 @@ X清楚了→確認新成屋中古屋、保固期、責任在誰→找到改進�
 
 這個示範展示：混合型問題（現象描述+流程問題）不直接給答案，先問一個最關鍵的診斷問題（聲音從哪裡來），屋主回答後才同時給診斷方向和處理步驟，不走完整洋蔥邏輯，只問一個問題。
 
+【QUICK_SYS的鐵則——只問一個問題，答了就給答案】
+QUICK_SYS只能問一個問題。屋主回答後，不管還有多少不確定，必須馬上給完整答案，不能再問第二個問題。如果還有不確定的地方，在答案裡說「如果是XXX情況，則YYY；如果是ZZZ情況，則WWW」，把不確定性放進答案裡處理，不要繼續問。
+
 【示範對話三——施工痕跡，頂樓梁底針頭】
 屋主：頂樓梁底很多打針的針頭，我很擔心是不是漏水，新成屋，之前驗屋梁底有空心，建商在修繕中，今天下雨我去看到的
 工具：好，目前知道的是——新成屋、之前驗屋梁底空心、修繕期間去看發現梁底有很多針頭、今天下雨、擔心是漏水。這樣對嗎？
@@ -810,6 +813,7 @@ var QUICK_SYS = `你是專業驗屋顧問，保持第三方立場。
 
 絕對不要：
 - 一次問多個問題
+- 問了一個問題、屋主回答後再問第二個問題——屋主回答後必須馬上給完整答案
 - 走洋蔥邏輯或診斷流程
 - 使用Markdown格式
 - 說具體品牌名稱`;
@@ -936,12 +940,13 @@ async function doSend(text) {
             hist.push({role: 'assistant', content: cleanQuickText});
             count++;
             saveToStorage();
-            // 快速模式也顯示評分按鈕（先清掉之前的）
+            // 快速模式也顯示評分按鈕（先清掉之前的，只在最後一輪顯示）
+            var isQuestion = cleanQuickText.trim().slice(-1) === '？' || cleanQuickText.trim().slice(-1) === '?';
+            if (!isQuestion) {
             var oldRatings = document.querySelectorAll('.rating-div');
             oldRatings.forEach(function(el) { el.parentNode.removeChild(el); });
             var ratingDiv = document.createElement('div');
             ratingDiv.className = 'rating-div';
-            ratingDiv.style.cssText = 'text-align:center;padding:12px 8px;margin:4px 0;';            var ratingDiv = document.createElement('div');
             ratingDiv.style.cssText = 'text-align:center;padding:12px 8px;margin:4px 0;';
             ratingDiv.innerHTML = '<div style="font-size:13px;color:#888;margin-bottom:8px;">這次對話有沒有幫你釐清方向？</div>';
             var ratings = [
@@ -965,6 +970,7 @@ async function doSend(text) {
             });
             document.getElementById('chat').appendChild(ratingDiv);
             setTimeout(function() { ratingDiv.scrollIntoView({behavior:'smooth', block:'end'}); }, 100);
+            } // end if(!isQuestion)
           }
           busy = false;
           showThink(false);
