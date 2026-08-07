@@ -67,7 +67,7 @@ body { font-family: -apple-system, sans-serif; background: #f5f5f5; color: #333;
   <div class="sessions">
     <table>
       <thead><tr><th>時間</th><th>Session ID</th><th>輪數</th><th>費用(USD)</th><th>評分</th></tr></thead>
-      <tbody id="session-list"><tr><td colspan="4" class="loading">載入中...</td></tr></tbody>
+      <tbody id="session-list"><tr><td colspan="5" class="loading">載入中...</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -111,7 +111,6 @@ async function fetchSupabase(path) {
 async function loadData() {
   document.getElementById('session-list').innerHTML = '<tr><td colspan="5" class="loading">載入中...</td></tr>';
   
-  // 取所有對話紀錄
   var data = await fetchSupabase('conversations?select=*&order=created_at.desc&limit=500');
   
   if (!data || data.error) {
@@ -119,7 +118,6 @@ async function loadData() {
     return;
   }
 
-  // 整理session
   var sessions = {};
   data.forEach(function(row) {
     var sid = row.session_id;
@@ -130,19 +128,31 @@ async function loadData() {
         created_at: row.created_at,
         max_turn: 0,
         helpful: null,
+        cost: 0,
         turns: []
       };
     }
-    if (row.helpful) sessions[sid].helpful = row.helpful;
-    // 計算費用
-    var inTok = parseInt(row.input_tokens) || 0;
-    var outTok = parseInt(row.output_tokens) || 0;
-    var cacheTok = parseInt(row.cache_read_tokens) || 0;
-    var normalTok = inTok - cacheTok;
-    if (normalTok < 0) normalTok = 0;
-    sessions[sid].cost = (sessions[sid].cost || 0) + (normalTok * 3 / 1000000) + (cacheTok * 0.3 / 1000000) + (outTok * 15 / 1000000);
-    if (row.turn_count > sessions[sid].max_turn) sessions[sid].max_turn = row.turn_count;
+    
+    // 評分紀錄（turn_count=0且helpful有值）——只取評分，不計費用和輪數
+    if (row.helpful) {
+      sessions[sid].helpful = row.helpful;
+    }
+    
+    // 非評分紀錄才計算費用和輪數
+    if (row.turn_count > 0) {
+      var inTok = parseInt(row.input_tokens) || 0;
+      var outTok = parseInt(row.output_tokens) || 0;
+      var cacheTok = parseInt(row.cache_read_tokens) || 0;
+      var normalTok = Math.max(0, inTok - cacheTok);
+      sessions[sid].cost += (normalTok * 3 / 1000000) + (cacheTok * 0.3 / 1000000) + (outTok * 15 / 1000000);
+      
+      if (row.turn_count > sessions[sid].max_turn) {
+        sessions[sid].max_turn = row.turn_count;
+      }
+    }
+    
     if (row.created_at < sessions[sid].created_at) sessions[sid].created_at = row.created_at;
+    
     if (row.user_message || row.ai_response) {
       sessions[sid].turns.push({
         turn: row.turn_count,
@@ -152,11 +162,11 @@ async function loadData() {
     }
   });
 
-  var sessionList = Object.values(sessions).sort(function(a,b) {
-    return new Date(b.created_at) - new Date(a.created_at);
-  });
+  // 過濾掉純評分紀錄的session（max_turn=0代表只有評分沒有對話）
+  var sessionList = Object.values(sessions)
+    .filter(function(s) { return s.max_turn > 0; })
+    .sort(function(a,b) { return new Date(b.created_at) - new Date(a.created_at); });
 
-  // 統計
   var total = sessionList.length;
   var totalTurns = sessionList.reduce(function(s,x){ return s + x.max_turn; }, 0);
   var avg = total > 0 ? (totalTurns / total).toFixed(1) : 0;
@@ -169,7 +179,6 @@ async function loadData() {
   document.getElementById('s-rated').textContent = rated;
   document.getElementById('s-helpful').textContent = helpfulRate;
 
-  // 列表
   var html = '';
   sessionList.forEach(function(s) {
     var time = s.created_at ? new Date(s.created_at).toLocaleString('zh-TW', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
@@ -184,14 +193,13 @@ async function loadData() {
     html += '<td>' + time + '</td>';
     html += '<td style="font-family:monospace;color:#888;">...' + shortId + '</td>';
     html += '<td>' + s.max_turn + ' 輪</td>';
-    var costStr = s.cost >= 0.0001 ? '$' + s.cost.toFixed(4) : (s.max_turn > 0 ? '$0.0001>' : '-');
+    var costStr = s.cost >= 0.0001 ? '$' + s.cost.toFixed(4) : '$0.0001>';
     html += '<td style="font-family:monospace;font-size:12px;">' + costStr + '</td>';
     html += '<td>' + helpfulHtml + '</td>';
     html += '</tr>';
   });
   document.getElementById('session-list').innerHTML = html || '<tr><td colspan="5" class="loading">沒有資料</td></tr>';
   
-  // 存session資料供detail用
   window._sessions = sessions;
 }
 
@@ -201,7 +209,7 @@ function showDetail(sid) {
   
   document.getElementById('detail-title').textContent = '對話詳情 — ' + sid.slice(-12);
   
-  var turns = s.turns.sort(function(a,b){ return a.turn - b.turn; });
+  var turns = s.turns.filter(function(t){ return t.turn > 0; }).sort(function(a,b){ return a.turn - b.turn; });
   var html = '';
   if (turns.length === 0) {
     html = '<div class="loading">這次對話沒有儲存內容</div>';
