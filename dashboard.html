@@ -162,9 +162,7 @@ async function loadData() {
     }
   });
 
-  // 過濾掉純評分紀錄的session（max_turn=0代表只有評分沒有對話）
   var sessionList = Object.values(sessions)
-    .filter(function(s) { return s.max_turn > 0; })
     .sort(function(a,b) { return new Date(b.created_at) - new Date(a.created_at); });
 
   var total = sessionList.length;
@@ -193,7 +191,7 @@ async function loadData() {
     html += '<td>' + time + '</td>';
     html += '<td style="font-family:monospace;color:#888;">...' + shortId + '</td>';
     html += '<td>' + s.max_turn + ' 輪</td>';
-    var costStr = s.cost >= 0.0001 ? '$' + s.cost.toFixed(4) : '$0.0001>';
+    var costStr = s.cost >= 0.0001 ? '$' + s.cost.toFixed(4) : (s.max_turn > 0 ? '$0.0001>' : '-');
     html += '<td style="font-family:monospace;font-size:12px;">' + costStr + '</td>';
     html += '<td>' + helpfulHtml + '</td>';
     html += '</tr>';
