@@ -1247,7 +1247,7 @@ async function doSend(text) {
             // 快速模式也顯示評分按鈕（先清掉之前的，只在最後一輪顯示）
             var trimmedText = cleanQuickText.trim();
             var lastChar = trimmedText.slice(-1);
-            var isQuestion = lastChar === '？' || lastChar === '?' || trimmedText.slice(-2) === '？\n' || trimmedText.indexOf('？') > trimmedText.length * 0.7;
+            var isQuestion = trimmedText.includes('？') || trimmedText.includes('?');
             if (!isQuestion) {
             var oldRatings = document.querySelectorAll('.rating-div');
             oldRatings.forEach(function(el) { el.parentNode.removeChild(el); });
