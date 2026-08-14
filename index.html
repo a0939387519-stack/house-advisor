@@ -1206,8 +1206,6 @@ async function doSend(text) {
         });
         var checkData = await checkR.json();
         var checkResult = checkData.text ? checkData.text.trim() : '';
-        console.log('CHECK_SYS raw data:', JSON.stringify(checkData).slice(0, 200));
-        console.log('CHECK_SYS result:', checkResult);
         
         // 清理checkResult，移除【】括號
         var cleanResult = checkResult.replace(/[【】]/g, '');
@@ -1251,7 +1249,6 @@ async function doSend(text) {
             var lastChar = trimmedText.slice(-1);
             var lastMeaningfulChar = trimmedText.replace(/[\s\n\r]+$/, '').slice(-1);
             var isQuestion = lastMeaningfulChar === '？' || lastMeaningfulChar === '?';
-            console.log('lastMeaningfulChar:', lastMeaningfulChar, 'isQuestion:', isQuestion);
             if (!isQuestion) {
             var oldRatings = document.querySelectorAll('.rating-div');
             oldRatings.forEach(function(el) { el.parentNode.removeChild(el); });
