@@ -1206,6 +1206,7 @@ async function doSend(text) {
         });
         var checkData = await checkR.json();
         var checkResult = checkData.text ? checkData.text.trim() : '';
+        console.log('CHECK_SYS result:', checkResult);
         
         // 清理checkResult，移除【】括號
         var cleanResult = checkResult.replace(/[【】]/g, '');
