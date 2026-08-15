@@ -1219,9 +1219,11 @@ async function doSend(text) {
         });
         var checkData = await checkR.json();
         var checkResult = checkData.text ? checkData.text.trim() : '';
+        console.log('CS1 result:', checkResult);
         
         // 清理checkResult，移除【】括號
         var cleanResult = checkResult.replace(/[【】]/g, '');
+        console.log('CS1 cleanResult:', cleanResult);
         
         if (cleanResult === '流程型') {
           // 流程型問題——用QUICK_SYS直接回答，不走洋蔥邏輯
