@@ -1241,8 +1241,64 @@ async function doSend(text) {
           showThink(false);
           var quickData = await quickR.json();
           if (quickData.text) {
+            // CS2：驗證QS答案深度，防止跳結論
+            var cs2Result = 'OK';
+            try {
+              var cs2Prompt = `你是一個品質檢查員。請檢查以下回答有沒有以下三個問題，只回答OK或說明問題：
+1. 有沒有從「現象描述」直接跳到「確定的診斷結論」？（例如：「踩有聲音」直接說「一定是空鼓」）
+2. 有沒有從「診斷結論」直接跳到「指定修繕工法」？（例如還沒確認範圍就說「要注入環氧樹脂」）
+3. 有沒有說出沒有依據的具體數字或品牌？
+
+如果以上都沒有，只回答：OK
+如果有問題，說明是哪個問題，一句話就好。
+
+待檢查的回答：
+${quickData.text}`;
+              var cs2R = await fetch(API, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                  no_stream: true,
+                  system: '你是品質檢查員，只做一件事：檢查回答有沒有跳結論或說出沒有依據的內容。',
+                  messages: [{role: 'user', content: cs2Prompt}],
+                  session_id: SESSION_ID,
+                  turn_count: 0
+                })
+              });
+              var cs2Data = await cs2R.json();
+              if (cs2Data.text) cs2Result = cs2Data.text.trim();
+            } catch(e) {
+              cs2Result = 'OK'; // CS2失敗時不影響主流程
+            }
+
+            // 如果CS2發現問題，讓QS重新調整深度
+            var finalQuickText = quickData.text;
+            if (cs2Result !== 'OK' && !cs2Result.startsWith('OK')) {
+              try {
+                var adjustR = await fetch(API, {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({
+                    no_stream: true,
+                    system: QUICK_SYS,
+                    messages: [
+                      {role: 'user', content: text},
+                      {role: 'assistant', content: quickData.text},
+                      {role: 'user', content: `請調整你的回答，問題是：${cs2Result}。停在目前資訊能支撐的深度，不要跳結論，不要指定修繕工法。`}
+                    ],
+                    session_id: SESSION_ID,
+                    turn_count: count,
+                    user_message: text
+                  })
+                });
+                var adjustData = await adjustR.json();
+                if (adjustData.text) finalQuickText = adjustData.text;
+              } catch(e) {
+                finalQuickText = quickData.text; // 調整失敗時用原版
+              }
+            }
             // 移除Markdown格式
-            var cleanQuickText = quickData.text
+            var cleanQuickText = finalQuickText
               .replace(/^#{1,6}\s+/gm, '')
               .replace(/\*\*([^*]+)\*\*/g, '$1')
               .replace(/\*([^*]+)\*/g, '$1')
