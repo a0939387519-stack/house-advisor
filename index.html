@@ -1266,7 +1266,10 @@ ${quickData.text}`;
                 })
               });
               var cs2Data = await cs2R.json();
-              if (cs2Data.text) cs2Result = cs2Data.text.trim();
+              if (cs2Data.text) {
+                cs2Result = cs2Data.text.trim();
+                console.log('CS2 result:', cs2Result);
+              }
             } catch(e) {
               cs2Result = 'OK'; // CS2失敗時不影響主流程
             }
