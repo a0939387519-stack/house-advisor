@@ -1451,6 +1451,7 @@ ${finalQuickText}`;
             var lastChar = trimmedText.slice(-1);
             var lastMeaningfulChar = trimmedText.replace(/[\s\n\r]+$/, '').slice(-1);
             var isQuestion = lastMeaningfulChar === '？' || lastMeaningfulChar === '?';
+            console.log('isQuestion:', isQuestion, 'lastMeaningfulChar:', lastMeaningfulChar);
             if (!isQuestion) {
             var oldRatings = document.querySelectorAll('.rating-div');
             oldRatings.forEach(function(el) { el.parentNode.removeChild(el); });
