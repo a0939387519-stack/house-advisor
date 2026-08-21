@@ -128,6 +128,8 @@ async function loadData() {
         created_at: row.created_at,
         max_turn: 0,
         helpful: null,
+        feedback: null,
+        email: null,
         cost: 0,
         turns: []
       };
@@ -136,6 +138,12 @@ async function loadData() {
     // 評分紀錄（turn_count=0且helpful有值）——只取評分，不計費用和輪數
     if (row.helpful) {
       sessions[sid].helpful = row.helpful;
+    }
+    if (row.feedback) {
+      sessions[sid].feedback = row.feedback;
+    }
+    if (row.email) {
+      sessions[sid].email = row.email;
     }
     
     // 非評分紀錄才計算費用和輪數
@@ -221,7 +229,15 @@ function showDetail(sid) {
     });
   }
   
-  document.getElementById('detail-content').innerHTML = html;
+  // 加上feedback和email
+  var extraHtml = '';
+  if (s.feedback) {
+    extraHtml += '<div style="margin-top:12px;padding:10px;background:#fff9e6;border-radius:8px;font-size:13px;"><strong>回饋：</strong>' + s.feedback + '</div>';
+  }
+  if (s.email) {
+    extraHtml += '<div style="margin-top:6px;padding:8px;background:#e8f5e9;border-radius:8px;font-size:13px;"><strong>Email：</strong>' + s.email + '</div>';
+  }
+  document.getElementById('detail-content').innerHTML = html + extraHtml;
   document.getElementById('detail').style.display = 'block';
 }
 
