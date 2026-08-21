@@ -1438,7 +1438,7 @@ async function doSend(text) {
               system: QUICK_SYS,
               messages: [{role: 'user', content: text}],
               session_id: SESSION_ID,
-              turn_count: count,
+              turn_count: count + 1,
               user_message: text
             })
           });
