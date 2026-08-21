@@ -13,10 +13,11 @@ module.exports = async function handler(req, res) {
     var sessionId = body.session_id;
     var helpful = body.helpful;
     var turnCount = body.turn_count || 0;
+    var feedback = body.feedback || null;
+    var email = body.email || null;
 
     if (!sessionId || !helpful) return res.status(400).json({error: 'missing fields'});
 
-    // INSERT一筆評分紀錄
     var sbR = await fetch(supabaseUrl + '/rest/v1/conversations', {
       method: 'POST',
       headers: {
@@ -28,6 +29,8 @@ module.exports = async function handler(req, res) {
         session_id: sessionId,
         turn_count: turnCount,
         helpful: helpful,
+        feedback: feedback,
+        email: email,
         input_tokens: 0,
         output_tokens: 0,
         cache_read_tokens: 0,
@@ -38,7 +41,6 @@ module.exports = async function handler(req, res) {
     console.log('Rating saved:', sbR.status, sessionId, helpful);
     return res.status(200).json({ok: true});
   } catch(e) {
-    console.log('Rating error:', e.message);
     return res.status(500).json({error: e.message});
   }
 };
