@@ -1564,7 +1564,7 @@ ${finalQuickText}`;
                   '<button id="feedback-submit" style="padding:6px 18px;background:#333;color:white;border:none;border-radius:8px;font-size:13px;cursor:pointer;">送出回饋</button>';
                 var submitBtn = ratingDiv.querySelector('#feedback-submit');
                 submitBtn.addEventListener('click', function() {
-                  var feedbackText = document.getElementById('feedback-text').value.trim();
+                  console.log('feedback submit clicked QS');
                   var feedbackEmail = document.getElementById('feedback-email').value.trim();
                   fetch('/api/rating', {
                     method: 'POST',
