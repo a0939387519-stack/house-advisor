@@ -1568,11 +1568,12 @@ ${finalQuickText}`;
                       console.log('feedback submit clicked QS');
                       var feedbackText = document.getElementById('feedback-text').value.trim();
                       var feedbackEmail = document.getElementById('feedback-email').value.trim();
+                      console.log('sending rating:', SESSION_ID, feedbackText, feedbackEmail);
                       fetch('/api/rating', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({session_id: SESSION_ID, helpful: ratingValue, turn_count: count, feedback: feedbackText, email: feedbackEmail})
-                      }).catch(function(){});
+                      }).then(function(r){ console.log('rating response:', r.status); }).catch(function(e){ console.log('rating error:', e); });
                       ratingDiv.innerHTML = '<div style="font-size:13px;color:#888;padding:4px;">謝謝你的回饋 🙏</div>';
                     };
                   }
