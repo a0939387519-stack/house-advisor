@@ -1554,7 +1554,6 @@ ${finalQuickText}`;
               btn.textContent = r.label;
               btn.style.cssText = 'margin:3px;padding:6px 12px;border:1px solid #ddd;border-radius:16px;background:#f5f5f5;cursor:pointer;font-size:13px;';
               btn.onclick = function() {
-                // 顯示選填問題和Email
                 var ratingValue = r.value;
                 var ratingQuestion = r.question;
                 ratingDiv.innerHTML = '<div style="font-size:13px;color:#888;margin-bottom:8px;">' + ratingQuestion + '</div>' +
@@ -1562,17 +1561,22 @@ ${finalQuickText}`;
                   '<div style="font-size:12px;color:#aaa;margin-bottom:6px;">如果你願意協助我們繼續改善，可以留下 Email（非必填）</div>' +
                   '<input id="feedback-email" type="email" placeholder="your@email.com" style="width:90%;max-width:320px;padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;display:block;margin:0 auto 8px;">' +
                   '<button id="feedback-submit" style="padding:6px 18px;background:#333;color:white;border:none;border-radius:8px;font-size:13px;cursor:pointer;">送出回饋</button>';
-                var submitBtn = ratingDiv.querySelector('#feedback-submit');
-                submitBtn.addEventListener('click', function() {
-                  console.log('feedback submit clicked QS');
-                  var feedbackEmail = document.getElementById('feedback-email').value.trim();
-                  fetch('/api/rating', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({session_id: SESSION_ID, helpful: ratingValue, turn_count: count, feedback: feedbackText, email: feedbackEmail})
-                  }).catch(function(){});
-                  ratingDiv.innerHTML = '<div style="font-size:13px;color:#888;padding:4px;">謝謝你的回饋 🙏</div>';
-                });
+                setTimeout(function() {
+                  var submitBtn = document.getElementById('feedback-submit');
+                  if (submitBtn) {
+                    submitBtn.onclick = function() {
+                      console.log('feedback submit clicked QS');
+                      var feedbackText = document.getElementById('feedback-text').value.trim();
+                      var feedbackEmail = document.getElementById('feedback-email').value.trim();
+                      fetch('/api/rating', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({session_id: SESSION_ID, helpful: ratingValue, turn_count: count, feedback: feedbackText, email: feedbackEmail})
+                      }).catch(function(){});
+                      ratingDiv.innerHTML = '<div style="font-size:13px;color:#888;padding:4px;">謝謝你的回饋 🙏</div>';
+                    };
+                  }
+                }, 50);
               };
               ratingDiv.appendChild(btn);
             });
@@ -1877,17 +1881,22 @@ ${finalQuickText}`;
               '<div style="font-size:12px;color:#aaa;margin-bottom:6px;">如果你願意協助我們繼續改善，可以留下 Email（非必填）</div>' +
               '<input id="feedback-email-mt" type="email" placeholder="your@email.com" style="width:90%;max-width:320px;padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;display:block;margin:0 auto 8px;">' +
               '<button id="feedback-submit-mt" style="padding:6px 18px;background:#333;color:white;border:none;border-radius:8px;font-size:13px;cursor:pointer;">送出回饋</button>';
-            var submitBtnMt = ratingDiv.querySelector('#feedback-submit-mt');
-            submitBtnMt.addEventListener('click', function() {
-              var feedbackText = document.getElementById('feedback-text-mt').value.trim();
-              var feedbackEmail = document.getElementById('feedback-email-mt').value.trim();
-              fetch('/api/rating', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({session_id: SESSION_ID, helpful: ratingValueMt, turn_count: count, feedback: feedbackText, email: feedbackEmail})
-              }).catch(function(){});
-              ratingDiv.innerHTML = '<div style="font-size:13px;color:#888;padding:4px;">謝謝你的回饋 🙏</div>';
-            });
+            setTimeout(function() {
+              var submitBtnMt = document.getElementById('feedback-submit-mt');
+              if (submitBtnMt) {
+                submitBtnMt.onclick = function() {
+                  console.log('feedback submit clicked MT');
+                  var feedbackText = document.getElementById('feedback-text-mt').value.trim();
+                  var feedbackEmail = document.getElementById('feedback-email-mt').value.trim();
+                  fetch('/api/rating', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_id: SESSION_ID, helpful: ratingValueMt, turn_count: count, feedback: feedbackText, email: feedbackEmail})
+                  }).catch(function(){});
+                  ratingDiv.innerHTML = '<div style="font-size:13px;color:#888;padding:4px;">謝謝你的回饋 🙏</div>';
+                };
+              }
+            }, 50);
           };
           ratingDiv.appendChild(btn);
         });
