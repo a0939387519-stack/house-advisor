@@ -1423,11 +1423,9 @@ async function doSend(text) {
         });
         var checkData = await checkR.json();
         var checkResult = checkData.text ? checkData.text.trim() : '';
-        console.log('CS1 result:', checkResult);
         
         // 清理checkResult，移除【】括號
         var cleanResult = checkResult.replace(/[【】]/g, '');
-        console.log('CS1 cleanResult:', cleanResult);
         
         if (cleanResult === '流程型') {
           // 流程型問題——用QUICK_SYS直接回答，不走洋蔥邏輯
@@ -1483,8 +1481,7 @@ ${finalQuickText}`;
               var cs2Data = await cs2R.json();
               if (cs2Data.text) {
                 cs2Result = cs2Data.text.trim();
-                console.log('CS2 result:', cs2Result);
-              }
+                }
             } catch(e) {
               cs2Result = 'OK'; // CS2失敗時不影響主流程
             }
@@ -1536,7 +1533,6 @@ ${finalQuickText}`;
             var lastChar = trimmedText.slice(-1);
             var lastMeaningfulChar = trimmedText.replace(/[\s\n\r]+$/, '').slice(-1);
             var isQuestion = lastMeaningfulChar === '？' || lastMeaningfulChar === '?';
-            console.log('isQuestion:', isQuestion, 'lastMeaningfulChar:', lastMeaningfulChar);
             if (!isQuestion) {
             var oldRatings = document.querySelectorAll('.rating-div');
             oldRatings.forEach(function(el) { el.parentNode.removeChild(el); });
@@ -1565,15 +1561,13 @@ ${finalQuickText}`;
                   var submitBtn = document.getElementById('feedback-submit');
                   if (submitBtn) {
                     submitBtn.onclick = function() {
-                      console.log('feedback submit clicked QS');
                       var feedbackText = document.getElementById('feedback-text').value.trim();
                       var feedbackEmail = document.getElementById('feedback-email').value.trim();
-                      console.log('sending rating:', SESSION_ID, feedbackText, feedbackEmail);
                       fetch('/api/rating', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({session_id: SESSION_ID, helpful: ratingValue, turn_count: count, feedback: feedbackText, email: feedbackEmail})
-                      }).then(function(r){ console.log('rating response:', r.status); }).catch(function(e){ console.log('rating error:', e); });
+                      }).catch(function(){});
                       ratingDiv.innerHTML = '<div style="font-size:13px;color:#888;padding:4px;">謝謝你的回饋 🙏</div>';
                     };
                   }
@@ -1886,8 +1880,7 @@ ${finalQuickText}`;
               var submitBtnMt = document.getElementById('feedback-submit-mt');
               if (submitBtnMt) {
                 submitBtnMt.onclick = function() {
-                  console.log('feedback submit clicked MT');
-                  var feedbackText = document.getElementById('feedback-text-mt').value.trim();
+                      var feedbackText = document.getElementById('feedback-text-mt').value.trim();
                   var feedbackEmail = document.getElementById('feedback-email-mt').value.trim();
                   fetch('/api/rating', {
                     method: 'POST',
