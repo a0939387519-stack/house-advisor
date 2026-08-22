@@ -19,8 +19,51 @@ module.exports = async function handler(req, res) {
   var supabaseUrl = 'https://csijnoonsdyppxpmbtpx.supabase.co';
   var supabaseKey = 'sb_publishable_85WrMl95Q9po_rapfgt38A_UXcY5Ueb';
 
+  // 安全限制常數
+  var MAX_TURNS_PER_SESSION = 10;
+  var MAX_DAILY_TOKENS = 600000; // 每日token上限，約$5
+
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured' });
+  }
+
+  // 安全上限檢查（只有有session_id且有user_message才檢查，Gate call不檢查）
+  if (sessionId && userMessage) {
+    try {
+      // 第一層：單一session輪數上限
+      if (turnCount > MAX_TURNS_PER_SESSION) {
+        return res.status(200).json({ 
+          text: '這次對話已經聊了很多輪了，建議你先整理一下目前的資訊，有新的問題可以重新開始一段對話。希望以上說明有幫到你，有任何問題隨時再來。',
+          usage: null,
+          limit: 'turns'
+        });
+      }
+
+      // 第二層：每日總token上限
+      var today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      var tokenR = await fetch(supabaseUrl + '/rest/v1/conversations?select=input_tokens,output_tokens&created_at=gte.' + today + 'T00:00:00Z', {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': 'Bearer ' + supabaseKey
+        }
+      });
+      if (tokenR.ok) {
+        var tokenData = await tokenR.json();
+        var totalTokens = tokenData.reduce(function(sum, r) {
+          return sum + (parseInt(r.input_tokens) || 0) + (parseInt(r.output_tokens) || 0);
+        }, 0);
+        if (totalTokens >= MAX_DAILY_TOKENS) {
+          return res.status(200).json({ 
+            text: '今天的使用量已經達到上限，明天再來繼續聊吧！感謝你的使用。',
+            usage: null,
+            limit: 'daily'
+          });
+        }
+      }
+    } catch(e) {
+      console.log('Safety check failed:', e.message);
+      // 安全檢查失敗就繼續，不擋住正常使用
+    }
   }
 
   try {
