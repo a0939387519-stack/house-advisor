@@ -1944,7 +1944,7 @@ ${finalQuickText}`;
       // Z給完之後顯示評分按鈕——hasConclusion（診斷型）或非問句結尾（QUICK_SYS多輪）
       var multiTurnLastChar = responseText.replace(/[\s\n\r]+$/, '').slice(-1);
       var multiTurnIsQuestion = multiTurnLastChar === '？' || multiTurnLastChar === '?';
-      if (hasConclusion || !multiTurnIsQuestion) {
+      if ((hasConclusion || !multiTurnIsQuestion) && !hasCheckpoint) {
         var oldRatingsMulti = document.querySelectorAll('.rating-div');
         oldRatingsMulti.forEach(function(el) { el.parentNode.removeChild(el); });
         var ratingDiv = document.createElement('div');
