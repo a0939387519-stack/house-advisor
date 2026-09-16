@@ -193,8 +193,8 @@ button#btn:disabled { background: #ccc; cursor: not-allowed; }
 </head>
 <body>
 <div class="header">
-  <h1>房子的問題，我陪你一起釐清</h1>
-  <p>說說你的狀況，一步步把方向找出來</p>
+  <h1>房子的問題，不用一個人摸索</h1>
+  <p>說說你的狀況，我陪你一起釐清問題、整理方向，讓你面對下一步時，更有依據</p>
 </div>
 <div id="chat"></div>
 <div class="bottom">
@@ -2125,7 +2125,7 @@ function restart() {
   try { localStorage.removeItem('ha_hist'); localStorage.removeItem('ha_count'); } catch(e) {}
   document.getElementById('btn').disabled = false;
   document.getElementById('chat').innerHTML = '';
-  addMsg('房子的問題，我陪你一起釐清。說說你的狀況，一步步把方向找出來。', 'ai');
+  addMsg('房子的問題，不用一個人摸索。說說你的狀況，我陪你一起釐清問題、整理方向，讓你面對下一步時，更有依據。', 'ai');
 }
 
 // Init: try to restore previous conversation
@@ -2146,7 +2146,7 @@ if (saved && saved.hist.length > 0) {
   notice.appendChild(clearBtn);
   document.getElementById('chat').insertBefore(notice, document.getElementById('chat').firstChild);
 } else {
-  addMsg('房子的問題，我陪你一起釐清。說說你的狀況，一步步把方向找出來。', 'ai');
+  addMsg('房子的問題，不用一個人摸索。說說你的狀況，我陪你一起釐清問題、整理方向，讓你面對下一步時，更有依據。', 'ai');
 }
 
 </script>
