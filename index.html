@@ -193,15 +193,15 @@ button#btn:disabled { background: #ccc; cursor: not-allowed; }
 </head>
 <body>
 <div class="header">
-  <h1>你的房子，我幫你想清楚</h1>
-  <p>說說你遇到的狀況，我一步一步幫你想清楚</p>
+  <h1>房子的問題，我陪你一起釐清</h1>
+  <p>說說你的狀況，一步步把方向找出來</p>
 </div>
 <div id="chat"></div>
 <div class="bottom">
   <div id="preview" class="preview-wrap"></div>
   <div class="row">
     <button class="upload-btn" id="uploadBtn" title="上傳照片或PDF">📎</button>
-    <textarea id="txt" rows="1" placeholder="說說你遇到的狀況…"></textarea>
+    <textarea id="txt" rows="1" placeholder="說說你看到或感受到的…"></textarea>
     <button id="btn">↑</button>
   </div>
   <input type="file" id="fileInput" accept="image/*,.pdf" multiple style="display:none">
@@ -2125,7 +2125,7 @@ function restart() {
   try { localStorage.removeItem('ha_hist'); localStorage.removeItem('ha_count'); } catch(e) {}
   document.getElementById('btn').disabled = false;
   document.getElementById('chat').innerHTML = '';
-  addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+  addMsg('房子的問題，我陪你一起釐清。說說你的狀況，一步步把方向找出來。', 'ai');
 }
 
 // Init: try to restore previous conversation
@@ -2146,7 +2146,7 @@ if (saved && saved.hist.length > 0) {
   notice.appendChild(clearBtn);
   document.getElementById('chat').insertBefore(notice, document.getElementById('chat').firstChild);
 } else {
-  addMsg('你好，說說你遇到什麼狀況？不用專業術語，就說你看到或感受到的是什麼。', 'ai');
+  addMsg('房子的問題，我陪你一起釐清。說說你的狀況，一步步把方向找出來。', 'ai');
 }
 
 </script>
