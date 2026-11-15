@@ -1822,8 +1822,8 @@ ${finalQuickText}`;
             hasCheckpoint = !!parsed.has_checkpoint;
             hasConclusion = !!parsed.has_conclusion;
             console.log('Structured output:', hasCheckpoint, hasConclusion);
-            // 串流模式：解析完JSON後顯示，替換緩衝提示
-            if (streamDone) {
+            // 串流模式：等Gate全部跑完才顯示（見下方），避免畫面顯示的是Gate修正前的內容
+            if (false && streamDone) {
               if (bufferMsgEl && bufferMsgEl.parentNode) {
                 bufferMsgEl.parentNode.removeChild(bufferMsgEl);
                 bufferMsgEl = null;
@@ -1859,6 +1859,66 @@ ${finalQuickText}`;
       } catch(parseErr) {
         console.log('Not structured output, using raw text');
       }
+
+      // 地排冒水類——程式把關（必問三題＋Z必備內容），只針對這類問題
+      try {
+        var dTxt = function(m) {
+          return typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(function(c){return c.type==='text';}).map(function(c){return c.text;}).join(' ') : String(m.content||''));
+        };
+        var userAll = hist.filter(function(m){return m.role==='user';}).map(dTxt).join('\n');
+        var asstAll = hist.filter(function(m){return m.role==='assistant';}).map(dTxt).join('\n');
+        var isDrain = /(地排|排水孔|落水頭|地板排水|地面排水)/.test(userAll) && /(冒水|冒出|逆流|回堵|倒灌|湧出|冒上來)/.test(userAll);
+        var lastChar = responseText.replace(/[\s\n\r]+$/, '').slice(-1);
+        var looksLikeZ = hasConclusion || (count > 0 && lastChar !== '？' && lastChar !== '?');
+        if (isDrain && looksLikeZ) {
+          var missingQ = [];
+          if (!/(\d+|[一二三四五六七八九十]+)\s*(樓|F|f)|透天|一樓|地下室/.test(userAll)) missingQ.push('住幾樓');
+          if (!/(沒有用水|沒用水|不用水|平常不用|平常沒|沒在用水|沒洗衣)/.test(asstAll + userAll)) missingQ.push('沒有用水的時候，地排會不會冒水');
+          if (/洗衣/.test(userAll) && !/(專用的?排水孔|專用排水|插在|插進|放進陽台地排|直接放進地排)/.test(asstAll)) missingQ.push('洗衣機的排水管，是插在洗衣機專用的排水孔，還是直接放進陽台地排');
+          var drainInstr = '';
+          if (missingQ.length > 0) {
+            drainInstr = '[系統指示：這是地排冒水類問題，給方向之前還缺少必問資訊。這一輪不要給方向，請直接一次問完以下問題：' + missingQ.join('；') + '。問完就停，不要整理、不要給結論。]';
+            console.log('Drain gate: missing', missingQ);
+          } else {
+            var missingZ = [];
+            if (!/倒/.test(responseText) || !/少量/.test(responseText)) missingZ.push('確認動作必須是「拿水桶慢慢、持續倒少量的水進地排，觀察反應」');
+            if (!/堵/.test(responseText)) missingZ.push('要列出「部分堵塞」方向');
+            if (!/(排氣|通氣)/.test(responseText)) missingZ.push('要列出「排氣不順」方向');
+            if (/洗衣/.test(userAll) && !/(接通|共管|同管)/.test(responseText)) missingZ.push('要列出「管路可能接通」方向');
+            if (/代表[^。]{0,12}接通了/.test(responseText)) missingZ.push('管路接通只能說「可能接通」，不能說「代表接通了」');
+            if (missingZ.length > 0) {
+              drainInstr = '[系統指示：這是地排冒水類問題，請重新寫這一輪的回覆，保留整理好的資訊，並修正：' + missingZ.join('；') + '。部分堵塞、排氣不順、管路接通三個方向並列。]';
+              console.log('Drain gate: Z missing', missingZ);
+            }
+          }
+          if (drainInstr) {
+            var dCtrl = new AbortController();
+            var dTimer = setTimeout(function() { dCtrl.abort(); }, 25000);
+            try {
+              var dR = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({no_stream:true, system:SYS, messages: hist.concat([{role:'assistant', content:responseText}, {role:'user', content:drainInstr}])}), signal: dCtrl.signal});
+              clearTimeout(dTimer);
+              var dData = await dR.json();
+              if (dData.text) {
+                var dNew = dData.text;
+                try {
+                  var dClean = dData.text.replace(/```json|```/g,'').trim();
+                  var dMatch = dClean.match(/\{[\s\S]*\}/);
+                  if (dMatch) { var dParsed = JSON.parse(dMatch[0]); if (dParsed.response) dNew = dParsed.response; }
+                } catch(e) {}
+                responseText = dNew;
+                if (missingQ.length > 0) { hasConclusion = false; hasCheckpoint = false; }
+              }
+            } catch(dErr) {
+              clearTimeout(dTimer);
+              console.log('Drain gate retry failed:', dErr.message);
+              if (missingQ.length > 0) {
+                responseText = '在給方向之前，還想先確認幾件事——' + missingQ.join('？') + '？';
+                hasConclusion = false; hasCheckpoint = false;
+              }
+            }
+          }
+        }
+      } catch(drainErr) { console.log('Drain gate error:', drainErr); }
 
       // Gate並行執行——Checkpoint和Conclusion同時跑，省時間
       if (count > 0 && (hasCheckpoint || hasConclusion)) {
@@ -1962,7 +2022,28 @@ ${finalQuickText}`;
           bufferMsgEl.parentNode.removeChild(bufferMsgEl);
           bufferMsgEl = null;
         }
-        addMsg(responseText, 'ai');
+        if (streamDone) {
+          // 打字效果顯示最終內容（Gate修正後）
+          streamMsgEl = addMsg('', 'ai');
+          (function(el, txt) {
+            var ci = 0;
+            var render = function(t) {
+              while (el.firstChild) el.removeChild(el.firstChild);
+              t.split('\n').forEach(function(ln, idx) {
+                if (idx > 0) el.appendChild(document.createElement('br'));
+                el.appendChild(document.createTextNode(ln));
+              });
+              el.scrollIntoView({behavior:'smooth', block:'end'});
+            };
+            var iv = setInterval(function() {
+              ci += 5;
+              if (ci >= txt.length) { clearInterval(iv); render(txt); return; }
+              render(txt.slice(0, ci));
+            }, 15);
+          })(streamMsgEl, responseText);
+        } else {
+          addMsg(responseText, 'ai');
+        }
       }
       count++;
       saveToStorage();
