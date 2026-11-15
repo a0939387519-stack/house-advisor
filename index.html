@@ -67,12 +67,14 @@ body {
   font-size: 14px;
 }
 .bottom {
+  position: fixed;
   position: sticky;
   bottom: 0;
   left: 0;
   right: 0;
   background: #fff;
   border-top: 1px solid #eee;
+  padding: 10px 14px 14px;
   padding: 10px 14px calc(14px + env(safe-area-inset-bottom, 0px));
 }
 .row {
@@ -1517,10 +1519,10 @@ async function doSend(text) {
         });
         var checkData = await checkR.json();
         var checkResult = checkData.text ? checkData.text.trim() : '';
-        
+
         // 清理checkResult，移除【】括號
         var cleanResult = checkResult.replace(/[【】]/g, '');
-        
+
         if (cleanResult === '流程型') {
           // 流程型問題——用QUICK_SYS直接回答，不走洋蔥邏輯
           // 繼續顯示loading，不用另外顯示緩衝提示
@@ -1733,12 +1735,12 @@ ${finalQuickText}`;
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({system: SYS, messages: messagesWithFiles, session_id: SESSION_ID, turn_count: count, api_calls: apiCallCount, turn_duration: Date.now() - turnStartTime, user_message: text})
     });
-    
+
     // 串流處理
     var rawText = '';
     var streamDone = false;
     var streamMsgEl = null;
-    
+
     if (r.headers.get('content-type') && r.headers.get('content-type').includes('text/event-stream')) {
       // 串流模式——先接收完整內容，再解析JSON，再顯示
       showThink(false);
@@ -1746,7 +1748,7 @@ ${finalQuickText}`;
       var bufferMsgEl = addMsg('正在為您整理分析結果...', 'ai');
       var reader = r.body.getReader();
       var decoder = new TextDecoder();
-      
+
       while (true) {
         var chunk = await reader.read();
         if (chunk.done) break;
@@ -1773,12 +1775,12 @@ ${finalQuickText}`;
       rawText = data.text || '';
       var bufferMsgEl = null; // 非串流模式沒有緩衝提示
     }
-    
+
     if (rawText) {
       var responseText = rawText;
       var hasCheckpoint = false;
       var hasConclusion = false;
-      
+
       // 嘗試解析結構化輸出
       try {
         var cleanRaw = rawText.replace(/```json|```/g, '').trim();
@@ -1833,19 +1835,19 @@ ${finalQuickText}`;
       } catch(parseErr) {
         console.log('Not structured output, using raw text');
       }
-      
+
       // Gate並行執行——Checkpoint和Conclusion同時跑，省時間
       if (count > 0 && (hasCheckpoint || hasConclusion)) {
         try {
           // 準備兩個Gate的Promise
           var cpPromise = null;
           var conPromise = null;
-          
+
           if (hasCheckpoint) {
             var cpGateMsg = [{role:'user', content:'工具說：「' + responseText.slice(0,300) + '」這個檢查動作，屋主自己能去確認嗎？還是需要進入公共區域（管道間、機電室、屋頂）、需要專業儀器、或需要專業人員才能判斷？回答JSON：{"user_can_check":true或false,"reason":"原因"}'}];
             cpPromise = fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({no_stream:true,system:'你是檢查點評估器。一般屋主的目視檢查（看矽利康、摸牆面、看水表、看磁磚縫）都算屋主能自己做。只有需要進入公共區域、需要專業儀器或需要技師判斷才算屋主做不到。只輸出JSON，不要其他文字。', messages:cpGateMsg})}).then(function(r){return r.json();});
           }
-          
+
           if (hasConclusion) {
             var recentHist2 = hist.slice(-6);
             while (recentHist2.length > 0 && recentHist2[0].role !== 'user') recentHist2 = recentHist2.slice(1);
@@ -1858,16 +1860,16 @@ ${finalQuickText}`;
             }).concat([{role:'user', content:'工具準備說：「' + responseText.slice(0,200) + '」目前是否已有足夠排除依據支持這個結論？回答JSON：{"sufficient":true或false,"next_question":"如果false，下一個最關鍵的問題是什麼","reason":"原因"}'}]);
             conPromise = fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({no_stream:true,system:'你是診斷導遊，不是法官。你的最高原則是：每一輪對話都要讓屋主的未知比上一輪少一點。只輸出JSON，不要其他文字。\n\n判斷邏輯：\n工具給的Z有沒有同時包含這三件事？\n1. 方向：目前資訊比較支持哪個方向（不需要100%確定，有合理推論就能說）\n2. 原理：為什麼支持這個方向（要有物理原理支撐，不是猜測）\n3. 精準問句或確認動作：屋主下一步能做什麼來進一步縮小範圍\n\n如果三件事都有→sufficient:true，放行\n如果方向和原理都有，但缺少精準問句→sufficient:true，放行（屋主至少知道方向）\n如果完全沒有方向→sufficient:false，給next_question\n\n注意：\n- 觸發條件不清楚不是攔截的理由，可以把「觀察洗澡前後」當成Z裡的確認動作\n- 不要追求100%確定才放行，有合理方向就放行\n- 目標是讓屋主每輪都有進展，不是讓工具不犯錯\n\n重要知識：\n1. 洗衣機排水（污水管）讓陽台地排（廢水管）冒水，需要同時考慮污廢水共管＋管路部分堵塞兩個問題。\n2. 廢水管出現下水道臭味，是污廢水共管的警訊，不能被忽略。\n3. 結論如果只說一個原因但現象指向多個問題，判斷為insufficient。', messages:conGateMessages2})}).then(function(r){return r.json();});
           }
-          
+
           // 同時等待兩個Gate結果
           var gateResults = await Promise.all([
             cpPromise || Promise.resolve(null),
             conPromise || Promise.resolve(null)
           ]);
-          
+
           var cpData2 = gateResults[0];
           var conData2 = gateResults[1];
-          
+
           // 處理Checkpoint Gate結果
           if (cpData2 && cpData2.text) {
             try {
@@ -1882,7 +1884,7 @@ ${finalQuickText}`;
               }
             } catch(e) { console.log('CP Gate parse error'); }
           }
-          
+
           // 處理Conclusion Gate結果
           if (conData2 && conData2.text) {
             try {
@@ -1924,9 +1926,9 @@ ${finalQuickText}`;
           }
         } catch(e) { console.log('Gate failed:', e); }
       }
-      
 
-      
+
+
       var turnDuration = Date.now() - turnStartTime;
       console.log('Turn duration:', turnDuration + 'ms', 'turn:', count+1);
       hist.push({role:'assistant', content:responseText});
@@ -1940,7 +1942,7 @@ ${finalQuickText}`;
       }
       count++;
       saveToStorage();
-      
+
       // Z給完之後顯示評分按鈕——hasConclusion（診斷型）或非問句結尾（QUICK_SYS多輪）
       var multiTurnLastChar = responseText.replace(/[\s\n\r]+$/, '').slice(-1);
       var multiTurnIsQuestion = multiTurnLastChar === '？' || multiTurnLastChar === '?';
@@ -1951,13 +1953,13 @@ ${finalQuickText}`;
         ratingDiv.className = 'rating-div';
         ratingDiv.style.cssText = 'text-align:center;padding:12px 8px;margin:4px 0;';
         ratingDiv.innerHTML = '<div style="font-size:13px;color:#888;margin-bottom:8px;">這次對話有沒有幫你釐清方向？</div>';
-        
+
         var ratings = [
           {label:'✅ 有幫助', value:'yes', question:'哪一部分對你最有幫助？（選填）'},
           {label:'🔸 部分有幫助', value:'partial', question:'還差哪一部分沒有解決？（選填）'},
           {label:'❌ 沒有幫助', value:'no', question:'哪裡和你的實際狀況不符合？（選填）'}
         ];
-        
+
         ratings.forEach(function(r) {
           var btn = document.createElement('button');
           btn.textContent = r.label;
@@ -1988,11 +1990,11 @@ ${finalQuickText}`;
           };
           ratingDiv.appendChild(btn);
         });
-        
+
         document.getElementById('chat').appendChild(ratingDiv);
         ratingDiv.scrollIntoView({behavior:'smooth', block:'end'});
       }
-      
+
       if (count >= 9 && !consultShown) showConsult();
     } else {
       addMsg('抱歉，連線有點問題，請再試一次。', 'ai');
@@ -2009,12 +2011,12 @@ var pendingFiles = []; // {type: 'image'|'pdf', data: base64, mediaType, name}
 window.addEventListener('load', function() {
   var uploadBtn = document.getElementById('uploadBtn');
   var fileInput = document.getElementById('fileInput');
-  
+
   uploadBtn.addEventListener('click', function() {
     fileInput.value = '';
     fileInput.click();
   });
-  
+
   fileInput.addEventListener('change', function() {
     if (this.files && this.files.length > 0) {
       handleFiles({target: {files: this.files}});
@@ -2070,10 +2072,10 @@ function send() {
   if (!val && pendingFiles.length === 0) return;
   txt.value = '';
   txt.style.height = 'auto';
-  
+
   var fileNote = pendingFiles.length > 0 ? '📎 已傳送 ' + pendingFiles.length + ' 個檔案' : '';
   var displayText = val ? (fileNote ? val + '\n\n' + fileNote : val) : (fileNote || '');
-  
+
   addMsgWithImages(displayText, 'user', pendingFiles.slice());
   doSend(val || '請先問我這張照片是哪個位置，等我確認後再描述你看到的內容。');
 }
