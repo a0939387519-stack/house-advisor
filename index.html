@@ -1523,6 +1523,16 @@ var CHECK_SYS = `判斷之前，先做這三個思考步驟：
 你知道的說就好。」
 除非屋主已經完整回答了這五個問題，才可以回覆「資訊足夠」。`;
 
+// 判斷這一輪是不是還在問屋主問題——還在問就不顯示評分按鈕
+function isAskingBack(t) {
+  var s = String(t || '').replace(/[\s\n\r]+$/, '');
+  if (/希望以上說明有幫到你|有任何問題隨時再來/.test(s)) return false;
+  var tail = s.slice(-150);
+  if (/[？?]/.test(tail)) return true;
+  if (/(你知道的說就好|說就好|跟我說|告訴我|麻煩回覆|再跟我確認)[。！!…]*$/.test(s)) return true;
+  return false;
+}
+
 async function doSend(text) {
   hist.push({role:'user', content:text});
   showThink(true);
@@ -1652,7 +1662,7 @@ ${finalQuickText}`;
             var trimmedText = cleanQuickText.trim();
             var lastChar = trimmedText.slice(-1);
             var lastMeaningfulChar = trimmedText.replace(/[\s\n\r]+$/, '').slice(-1);
-            var isQuestion = lastMeaningfulChar === '？' || lastMeaningfulChar === '?';
+            var isQuestion = isAskingBack(cleanQuickText);
             if (!isQuestion) {
             var oldRatings = document.querySelectorAll('.rating-div');
             oldRatings.forEach(function(el) { el.parentNode.removeChild(el); });
@@ -2050,8 +2060,8 @@ ${finalQuickText}`;
 
       // Z給完之後顯示評分按鈕——hasConclusion（診斷型）或非問句結尾（QUICK_SYS多輪）
       var multiTurnLastChar = responseText.replace(/[\s\n\r]+$/, '').slice(-1);
-      var multiTurnIsQuestion = multiTurnLastChar === '？' || multiTurnLastChar === '?';
-      if ((hasConclusion || !multiTurnIsQuestion) && !hasCheckpoint) {
+      var multiTurnIsQuestion = isAskingBack(responseText);
+      if (!multiTurnIsQuestion && !hasCheckpoint) {
         var oldRatingsMulti = document.querySelectorAll('.rating-div');
         oldRatingsMulti.forEach(function(el) { el.parentNode.removeChild(el); });
         var ratingDiv = document.createElement('div');
